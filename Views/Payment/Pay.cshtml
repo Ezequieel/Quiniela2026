@@ -1,0 +1,134 @@
+@model PaymentVm
+@{ ViewData["Title"] = "Inscripción — " + Model.StageName; }
+
+<div class="page-header">
+    <div>
+        <a asp-controller="Tournament" asp-action="Index" class="breadcrumb">← Torneos</a>
+        <h1>Inscripción: @Model.StageName</h1>
+    </div>
+</div>
+
+<div class="payment-layout">
+    <div class="card">
+        <h3 class="card-title">Instrucciones de pago</h3>
+        <div class="amount-badge">$@Model.EntryFee</div>
+        <p class="amount-label">Monto a depositar</p>
+
+        @if (!string.IsNullOrEmpty(Model.PaymentInfo))
+        {
+            <div class="payment-instructions">
+                @Html.Raw(Model.PaymentInfo?.Replace("\n", "<br/>"))
+            </div>
+        }
+
+        @if (!string.IsNullOrEmpty(Model.PaymentQrPath) || !string.IsNullOrEmpty(Model.PaymentUrl))
+        {
+            <div class="qr-wrap">
+                @if (!string.IsNullOrEmpty(Model.PaymentQrPath))
+                {
+                    <p class="qr-label">Escanea el código QR para realizar el pago</p>
+                    <img src="@Model.PaymentQrPath" alt="QR de pago" class="qr-img" />
+                }
+                @if (!string.IsNullOrEmpty(Model.PaymentUrl))
+                {
+                    <div class="qr-url-alt">
+                        <p class="qr-url-label">¿No puedes escanear el QR?</p>
+                        <a href="@Model.PaymentUrl" target="_blank" rel="noopener"
+                           class="btn btn-outline btn-sm qr-url-btn">
+                            Pagar por enlace directo →
+                        </a>
+                    </div>
+                }
+            </div>
+        }
+
+        <div class="points-system">
+            <h4>Sistema de puntos</h4>
+            <p style="font-size:.78rem;color:var(--text3);margin-bottom:.8rem;font-style:italic">
+                El puntaje NO es acumulativo — se otorga el mayor nivel alcanzado por partido.
+            </p>
+            <div class="points-row">
+                <span class="points-icon">5</span>
+                <div>
+                    <strong>Marcador exacto</strong><br>
+                    <span class="text-muted">Aciertas los goles exactos de ambos equipos</span>
+                </div>
+            </div>
+            <div class="points-row">
+                <span class="points-icon">2</span>
+                <div>
+                    <strong>Solo resultado correcto</strong><br>
+                    <span class="text-muted">Aciertas quién gana o si es empate</span>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <div class="card">
+        <h3 class="card-title">Subir comprobante</h3>
+        <p class="text-muted" style="margin-bottom:1.2rem">
+            Una sola inscripción te da acceso a <strong>todas las fases</strong> del torneo. Sube el comprobante y tu participación se activará de inmediato.
+        </p>
+
+        <form asp-action="Pay" method="post" enctype="multipart/form-data">
+            @Html.AntiForgeryToken()
+            <input type="hidden" asp-for="StageId" />
+            <div asp-validation-summary="All" class="val-summary"></div>
+
+            <div class="upload-zone" id="upload-zone">
+                <div class="upload-icon">📄</div>
+                <p class="upload-text">Arrastra el archivo aquí o</p>
+                <label class="btn btn-secondary btn-sm" style="cursor:pointer;margin-top:.3rem">
+                    Seleccionar archivo
+                    <input asp-for="Voucher" type="file" accept=".jpg,.jpeg,.png,.pdf"
+                           style="display:none" id="voucher-input" onchange="previewFile(this)" />
+                </label>
+                <p class="upload-hint">JPG, PNG o PDF — máximo 5 MB</p>
+                <div id="file-preview" style="display:none" class="file-preview"></div>
+            </div>
+            <span asp-validation-for="Voucher" class="field-err"></span>
+
+            <div class="field" style="margin-top:1rem">
+                <label asp-for="Notes">Notas <span class="hint">Opcional — ej: transferencia del 15/01</span></label>
+                <input asp-for="Notes" class="input" placeholder="Información adicional del pago" />
+            </div>
+
+            <button type="submit" class="btn btn-primary btn-full" style="margin-top:.8rem">
+                Confirmar pago e inscribirme al torneo completo
+            </button>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+function previewFile(input) {
+    const file = input.files[0];
+    if (!file) return;
+    const preview = document.getElementById('file-preview');
+    const zone    = document.getElementById('upload-zone');
+    preview.style.display = 'flex';
+    zone.classList.add('has-file');
+    if (file.type.startsWith('image/')) {
+        const reader = new FileReader();
+        reader.onload = e => {
+            preview.innerHTML = `<img src="${e.target.result}" style="max-height:140px;border-radius:6px;"/><span>${file.name}</span>`;
+        };
+        reader.readAsDataURL(file);
+    } else {
+        preview.innerHTML = `<span style="font-size:1.8rem;opacity:.6">📄</span><span>${file.name}</span>`;
+    }
+}
+const zone = document.getElementById('upload-zone');
+zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('drag-over'); });
+zone.addEventListener('dragleave', () => zone.classList.remove('drag-over'));
+zone.addEventListener('drop', e => {
+    e.preventDefault();
+    zone.classList.remove('drag-over');
+    const input = document.getElementById('voucher-input');
+    input.files = e.dataTransfer.files;
+    previewFile(input);
+});
+</script>
+}

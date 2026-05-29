@@ -1,0 +1,88 @@
+@model CreateStageVm
+@{ ViewData["Title"] = "Nueva fase"; Layout = "~/Views/Shared/_Layout.cshtml"; }
+
+<div class="page-header">
+    <div>
+        <a href="/Admin/Index" class="breadcrumb">← Administración</a>
+        <h1>Nueva fase — @Model.TournamentName</h1>
+    </div>
+</div>
+
+<div class="card" style="max-width:620px">
+    <form asp-action="CreateStage" method="post">
+        @Html.AntiForgeryToken()
+        <input type="hidden" asp-for="TournamentId" />
+        <div asp-validation-summary="All" class="val-summary"></div>
+
+        <div class="field">
+            <label asp-for="Name">Nombre de la fase</label>
+            <input asp-for="Name" class="input" placeholder="Jornada 12 / Cuartos de final" />
+            <span asp-validation-for="Name" class="field-err"></span>
+        </div>
+
+        <div class="fields-row">
+            <div class="field">
+                <label asp-for="Type">Tipo</label>
+                <select asp-for="Type" class="input">
+                    <option value="League">Jornada de liga</option>
+                    <option value="GroupStage">Fase de grupos</option>
+                    <option value="RoundOf32">Treintaidosavos</option>
+                    <option value="RoundOf16">Dieciseisavos</option>
+                    <option value="QuarterFinal">Cuartos de final</option>
+                    <option value="SemiFinal">Semifinales</option>
+                    <option value="Final">Final</option>
+                </select>
+            </div>
+            <div class="field">
+                <label asp-for="OrderNum">Orden</label>
+                <input asp-for="OrderNum" class="input" type="number" min="1" />
+                <span class="hint">Posición dentro del torneo</span>
+            </div>
+        </div>
+
+        <div class="field">
+            <label asp-for="ApiRound">Jornada de la API</label>
+            @if (Model.AvailableRounds.Any())
+            {
+                <select asp-for="ApiRound" class="input"
+                        asp-items="@(new SelectList(Model.AvailableRounds))">
+                    <option value="">— Selecciona una jornada —</option>
+                </select>
+            }
+            else
+            {
+                <input asp-for="ApiRound" class="input" placeholder="Regular Season - 38" />
+                <span class="hint">Para Mundial: Group Stage - A, Round of 16, Quarter-finals...</span>
+            }
+            <span asp-validation-for="ApiRound" class="field-err"></span>
+        </div>
+
+        <div class="fields-row">
+            <div class="field">
+                <label asp-for="EntryFee">Cuota de inscripción ($)</label>
+                <input asp-for="EntryFee" class="input" type="number" step="0.01" min="0.01" />
+                <span asp-validation-for="EntryFee" class="field-err"></span>
+            </div>
+            <div class="field">
+                <label asp-for="PredictionDeadline">Cierre de predicciones <span class="hint">Hora de El Salvador (UTC-6)</span></label>
+                <input asp-for="PredictionDeadline" class="input" type="datetime-local"
+                       value="@Model.PredictionDeadline.ToString("yyyy-MM-ddTHH:mm")" />
+                <span asp-validation-for="PredictionDeadline" class="field-err"></span>
+            </div>
+        </div>
+
+        <div class="field">
+            <label asp-for="GroupKey">
+                Clave de grupo de pago
+                <span class="hint">Opcional — fases con la misma clave comparten un solo pago. Ej: "grupos" para las 3 jornadas de grupos</span>
+            </label>
+            <input asp-for="GroupKey" class="input" placeholder="ej: grupos, eliminatorias" />
+        </div>
+
+        <div class="info-banner" style="margin-bottom:1rem">
+            Los partidos se cargarán automáticamente desde API-Football al crear la fase.
+        </div>
+
+        <button type="submit" class="btn btn-primary">Crear fase y cargar partidos</button>
+    </form>
+</div>

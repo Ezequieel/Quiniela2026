@@ -1,0 +1,66 @@
+/* ══════════════════════════════════════════════════════
+   MUNDIAL 2026 — Hero limpio
+══════════════════════════════════════════════════════ */
+.wc-hero {
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  padding: 2.5rem 1.5rem 2rem;
+  text-align: center;
+  position: relative; overflow: hidden;
+  margin-bottom: 1.8rem;
+  box-shadow: var(--shadow-sm);
+}
+/* Línea roja arriba — simple */
+.wc-hero::before {
+  content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px;
+  background: var(--red);
+}
+/* Bloques de color muy sutiles en esquinas */
+.wc-hero-corner-tl { position: absolute; top: 0; left: 0; width: 80px; height: 80px; background: #D42B2B; border-radius: 0 0 100% 0; opacity: .05; }
+.wc-hero-corner-tr { position: absolute; top: 0; right: 0; width: 60px; height: 60px; background: #7DC242; border-radius: 0 0 0 100%; opacity: .05; }
+.wc-hero-corner-bl { position: absolute; bottom: 0; left: 0; width: 50px; height: 50px; background: #5B2D8E; border-radius: 0 100% 0 0; opacity: .05; }
+.wc-hero-corner-br { position: absolute; bottom: 0; right: 0; width: 70px; height: 70px; background: #1B3A8C; border-radius: 100% 0 0 0; opacity: .05; }
+
+.wc-trophy-img-wrap { position: relative; z-index: 1; margin-bottom: .8rem; display: flex; justify-content: center; min-height: 220px; align-items: center; }
+.wc-trophy-img { width: 220px; height: auto; animation: float 4s ease-in-out infinite; }
+@media (max-width: 480px) { .wc-trophy-img-wrap { min-height: 160px; } .wc-trophy-img { width: 160px; } }
+@keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
+
+.wc-hero-badge {
+  display: inline-block; background: var(--gray-100); border: 1px solid var(--gray-300);
+  color: var(--text3); padding: .25rem 1rem; border-radius: 4px;
+  font-size: .68rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px;
+  margin-bottom: 1rem; position: relative; z-index: 1;
+}
+.wc-hero-title {
+  font-size: clamp(1.6rem, 5vw, 2.6rem); font-weight: 900;
+  color: var(--black); letter-spacing: -1px; line-height: 1;
+  margin-bottom: .5rem; position: relative; z-index: 1;
+}
+.wc-hero-title span { color: var(--red); }
+.wc-hero-sub { color: var(--text3); font-size: clamp(.74rem, 2vw, .84rem); margin-bottom: 0; position: relative; z-index: 1; }
+
+.wc-countdown { display: flex; justify-content: center; gap: .5rem; margin: 1.5rem 0 1.2rem; flex-wrap: wrap; position: relative; z-index: 1; }
+.wc-cd-unit { background: var(--gray-50); border: 1px solid var(--gray-200); border-radius: var(--r); padding: .7rem 1rem; text-align: center; min-width: 66px; flex: 1; max-width: 88px; }
+.wc-cd-num  { display: block; font-size: clamp(1.4rem, 4vw, 1.9rem); font-weight: 900; color: var(--red); font-variant-numeric: tabular-nums; line-height: 1; }
+.wc-cd-lbl  { display: block; font-size: .58rem; color: var(--text4); text-transform: uppercase; letter-spacing: .8px; margin-top: .25rem; }
+
+.wc-hero-stats { display: flex; justify-content: center; flex-wrap: wrap; position: relative; z-index: 1; border-top: 1px solid var(--gray-200); padding-top: 1.2rem; }
+.wc-hero-stat { text-align: center; flex: 1; min-width: 80px; padding: 0 .8rem; border-right: 1px solid var(--gray-200); }
+.wc-hero-stat:last-child { border-right: none; }
+.wc-hero-stat-num { display: block; font-size: clamp(1.3rem, 4vw, 1.8rem); font-weight: 900; color: var(--black); line-height: 1; }
+.wc-hero-stat-lbl { display: block; font-size: .6rem; color: var(--text4); text-transform: uppercase; letter-spacing: .6px; margin-top: .3rem; }
+
+/* Stage header en predicciones */
+.wc-stage-header { background: var(--white); border: 1px solid var(--border); border-radius: var(--r-lg); padding: 1.2rem 1.4rem; margin-bottom: 1.4rem; position: relative; overflow: hidden; box-shadow: var(--shadow-sm); }
+.wc-stage-header::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; background: var(--red); }
+.wc-stage-header h1 { color: var(--black) !important; }
+.wc-stage-header .breadcrumb { color: var(--text4); }
+.wc-stage-header .deadline-bar { color: var(--text2); }
+
+/* Leaderboard mundial */
+.lb-wc-header { background: var(--white); border-radius: var(--r-lg) var(--r-lg) 0 0; padding: 1.3rem; text-align: center; border: 1px solid var(--border); border-bottom: none; position: relative; }
+.lb-wc-header::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; background: var(--red); border-radius: var(--r-lg) var(--r-lg) 0 0; }
+.lb-wc-title { font-size: 1rem; font-weight: 800; color: var(--black); margin-bottom: .2rem; }
+.lb-wc-sub   { color: var(--text3); font-size: .76rem; }

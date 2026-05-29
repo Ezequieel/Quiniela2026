@@ -1,0 +1,239 @@
+@model HomeVm
+@{
+    ViewData["Title"] = "Torneos";
+    var hasMundial = Model.Tournaments.Any(t => t.ApiLeagueId == 1);
+    ViewBag.IsMundial = hasMundial;
+    // Champions League = league 2
+}
+
+@* ── Hero del Mundial (solo si hay torneo del Mundial) ── *@
+@if (hasMundial)
+{
+    <div class="wc-hero">
+        <div class="wc-hero-corner-tl"></div>
+        <div class="wc-hero-corner-tr"></div>
+        <div class="wc-hero-corner-bl"></div>
+        <div class="wc-hero-corner-br"></div>
+        <div class="wc-trophy-img-wrap">
+            <img src="/img/wc2026-logo.png" alt="FIFA World Cup 2026" class="wc-trophy-img" />
+        </div>
+        <div class="wc-hero-badge">FIFA World Cup 2026</div>
+        <h1 class="wc-hero-title">Quiniela <span>Mundial 2026</span></h1>
+        <p class="wc-hero-sub">USA · Canadá · México &mdash; 11 Jun – 19 Jul 2026</p>
+
+        <div class="wc-countdown" id="wc-countdown">
+            <div class="wc-cd-unit"><span class="wc-cd-num" id="cd-d">--</span><span class="wc-cd-lbl">Días</span></div>
+            <div class="wc-cd-unit"><span class="wc-cd-num" id="cd-h">--</span><span class="wc-cd-lbl">Horas</span></div>
+            <div class="wc-cd-unit"><span class="wc-cd-num" id="cd-m">--</span><span class="wc-cd-lbl">Min</span></div>
+            <div class="wc-cd-unit"><span class="wc-cd-num" id="cd-s">--</span><span class="wc-cd-lbl">Seg</span></div>
+        </div>
+
+        <div class="wc-hero-stats">
+            <div class="wc-hero-stat">
+                <span class="wc-hero-stat-num">48</span>
+                <span class="wc-hero-stat-lbl">Selecciones</span>
+            </div>
+            <div class="wc-hero-stat">
+                <span class="wc-hero-stat-num">104</span>
+                <span class="wc-hero-stat-lbl">Partidos</span>
+            </div>
+            <div class="wc-hero-stat">
+                <span class="wc-hero-stat-num">16</span>
+                <span class="wc-hero-stat-lbl">Estadios</span>
+            </div>
+            <div class="wc-hero-stat">
+                <span class="wc-hero-stat-num">39</span>
+                <span class="wc-hero-stat-lbl">Días de torneo</span>
+            </div>
+        </div>
+    </div>
+}
+
+@* ── Saludo ── *@
+<div class="page-header">
+    <div>
+        <h1 style="@(hasMundial ? "color:#fff" : "")">Bienvenido, @Model.UserName</h1>
+        <p class="text-muted">Selecciona un torneo para participar o ver tus predicciones.</p>
+    </div>
+</div>
+
+@if (!Model.Tournaments.Any())
+{
+    <div class="card">
+        <div class="empty-box">
+            <div class="empty-icon">⚽</div>
+            <h3>No hay torneos activos</h3>
+            <p>El administrador publicará uno pronto.</p>
+        </div>
+    </div>
+}
+
+@foreach (var t in Model.Tournaments)
+{
+    var isMundial = t.ApiLeagueId == 1;
+    var isUcl = t.ApiLeagueId == 2;
+    <div class="tournament-block @(isMundial ? "wc-theme" : isUcl ? "ucl-theme" : "")">
+        <div class="tournament-header">
+            @if (t.LogoUrl != null)
+            {
+                <img src="@t.LogoUrl" class="tour-logo" alt="@t.Name" />
+            }
+            else if (isMundial)
+            {
+                <span style="font-size:2rem">🏆</span>
+            }
+            <div class="tour-info">
+                <h2>@t.Name</h2>
+                @if (!string.IsNullOrEmpty(t.Description))
+                {
+                    <p class="text-muted" style="font-size:.82rem">@t.Description</p>
+                }
+                <div class="tour-meta">
+                    <span class="chip @(isMundial ? "" : "chip-gray")">@t.TotalPlayers participantes</span>
+                    @if (t.IsJoined)
+                    {
+                        <span class="chip @(isMundial ? "" : "chip-blue")">@t.MyTotalPoints pts acumulados</span>
+                    }
+                </div>
+            </div>
+        </div>
+
+        @if (!t.Stages.Any())
+        {
+            <p class="text-muted" style="padding:1.1rem 1.3rem;font-size:.83rem">
+                Las fases se publicarán pronto.
+            </p>
+        }
+
+        <div class="stages-grid">
+        @foreach (var s in t.Stages)
+        {
+            <div class="stage-card @(s.IsPaid ? "stage-paid" : "")">
+                <div class="stage-card-top">
+                    <div>
+                        <div class="stage-name">@s.Name</div>
+                        <div class="stage-type">
+                            @(s.Type == "League" ? "Jornada de liga" :
+                              s.Type == "GroupStage" ? "Fase de grupos" :
+                              s.Type == "RoundOf32" ? "Treintaidosavos" :
+                              s.Type == "RoundOf16" ? "Dieciseisavos" :
+                              s.Type == "QuarterFinal" ? "Cuartos de final" :
+                              s.Type == "SemiFinal" ? "Semifinal" :
+                              s.Type == "Final" ? "Gran Final" : s.Type)
+                        </div>
+                    </div>
+                    <span class="stage-status stage-@s.Status.ToLower()">
+                        @(s.Status == "Open" ? "Abierta" :
+                          s.Status == "InProgress" ? "En curso" :
+                          s.Status == "Finished" ? "Finalizada" : "Pendiente")
+                    </span>
+                </div>
+
+                <div class="stage-stats">
+                    <div class="stage-stat">
+                        <span class="stat-val">$@s.EntryFee</span>
+                        <span class="stat-lbl">Cuota</span>
+                    </div>
+                    <div class="stage-stat">
+                        <span class="stat-val">@s.TotalMatches</span>
+                        <span class="stat-lbl">Partidos</span>
+                    </div>
+                    @if (s.IsPaid)
+                    {
+                        <div class="stage-stat">
+                            <span class="stat-val">@s.MyPoints</span>
+                            <span class="stat-lbl">Mis pts</span>
+                        </div>
+                        @if (s.MyRank > 0)
+                        {
+                            <div class="stage-stat">
+                                <span class="stat-val">#@s.MyRank</span>
+                                <span class="stat-lbl">Posición</span>
+                            </div>
+                        }
+                    }
+                </div>
+
+                @if (s.CanPredict)
+                {
+                    <div class="stage-deadline">
+                        Predicciones cierran: @TimeHelper.Format(s.Deadline, "dd MMM, HH:mm")
+                    </div>
+                }
+
+                <div class="stage-actions">
+                    @if (!s.IsPaid && s.Status != "Finished")
+                    {
+                        <a asp-controller="Payment" asp-action="Pay" asp-route-stageId="@s.Id"
+                           class="btn @(isMundial ? "btn-wc" : "btn-primary") btn-sm">
+                            Pagar $@s.EntryFee e inscribirme
+                        </a>
+                    }
+                    else if (s.IsPaid)
+                    {
+                        <a asp-controller="Prediction" asp-action="Stage" asp-route-stageId="@s.Id"
+                           class="btn @(isMundial ? (s.CanPredict ? "btn-wc" : "btn-wc-outline") : (s.CanPredict ? "btn-primary" : "btn-secondary")) btn-sm">
+                            @(s.CanPredict ? "Hacer predicciones" : "Ver resultados")
+                        </a>
+                        <a asp-controller="Leaderboard" asp-action="Index"
+                           asp-route-tournamentId="@t.Id" asp-route-stageId="@s.Id"
+                           class="btn @(isMundial ? "btn-wc-outline" : "btn-outline") btn-sm">Clasificación</a>
+                    }
+                </div>
+            </div>
+        }
+        </div>
+
+        @if (t.IsJoined)
+        {
+            <div class="tournament-footer" style="display:flex;gap:.5rem">
+                <a asp-controller="Leaderboard" asp-action="Index" asp-route-tournamentId="@t.Id"
+                   class="btn @(isMundial ? "btn-wc-outline" : "btn-outline") btn-sm">
+                    Clasificación general
+                </a>
+                @{
+                    var todasCerradas = !t.Stages.Any(s =>
+                        s.Status != "Finished" &&
+                        s.Deadline > DateTime.UtcNow);
+                }
+                @if (todasCerradas || User.IsInRole("Admin"))
+                {
+                    <a asp-controller="History" asp-action="Log" asp-route-tournamentId="@t.Id"
+                       class="btn @(isMundial ? "btn-wc-outline" : "btn-outline") btn-sm">
+                        Registro de predicciones
+                    </a>
+                }
+                else
+                {
+                    <span class="btn btn-secondary btn-sm" style="opacity:.5;cursor:default"
+                          title="Disponible cuando cierren las predicciones">
+                        🔒 Registro de predicciones
+                    </span>
+                }
+            </div>
+        }
+    </div>
+}
+
+@section Scripts {
+<script>
+// Countdown al Mundial 2026 (11 de junio 2026, 17:00 UTC)
+const wcStart = new Date('2026-06-11T17:00:00Z');
+function updateCountdown() {
+    const diff = wcStart - Date.now();
+    if (diff <= 0) {
+        document.getElementById('wc-countdown')?.remove();
+        return;
+    }
+    const d = Math.floor(diff / 86400000);
+    const h = Math.floor((diff % 86400000) / 3600000);
+    const m = Math.floor((diff % 3600000) / 60000);
+    const s = Math.floor((diff % 60000) / 1000);
+    const pad = n => String(n).padStart(2,'0');
+    const el = (id, val) => { const e = document.getElementById(id); if(e) e.textContent = pad(val); };
+    el('cd-d', d); el('cd-h', h); el('cd-m', m); el('cd-s', s);
+}
+updateCountdown();
+setInterval(updateCountdown, 1000);
+</script>
+}

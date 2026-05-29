@@ -1,0 +1,168 @@
+@model AdminDashboardVm
+@{ ViewData["Title"] = "Administración"; Layout = "~/Views/Shared/_Layout.cshtml"; }
+
+<div class="page-header">
+    <h1>Panel de administración</h1>
+    <div class="admin-actions">
+        <a asp-action="CreateTournament" class="btn btn-primary btn-sm">Nuevo torneo</a>
+        <a asp-action="Payments" class="btn btn-secondary btn-sm">Ver pagos</a>
+    </div>
+</div>
+
+<div class="admin-stats">
+    <div class="admin-stat-card">
+        <div class="admin-stat-num">@Model.TotalUsers</div>
+        <div class="admin-stat-lbl">Participantes</div>
+    </div>
+    <div class="admin-stat-card">
+        <div class="admin-stat-num">@Model.ActiveTournaments</div>
+        <div class="admin-stat-lbl">Torneos activos</div>
+    </div>
+    <div class="admin-stat-card">
+        <div class="admin-stat-num">@Model.TotalPredictions</div>
+        <div class="admin-stat-lbl">Predicciones</div>
+    </div>
+    <div class="admin-stat-card @(Model.PendingPayments > 0 ? "has-alert" : "")">
+        <div class="admin-stat-num">@Model.PendingPayments</div>
+        <div class="admin-stat-lbl">Pagos pendientes</div>
+    </div>
+</div>
+
+<div class="card" style="padding:0;overflow:hidden">
+    <div style="padding:.9rem 1.1rem;border-bottom:1px solid var(--border);background:var(--bg);display:flex;justify-content:space-between;align-items:center">
+        <span style="font-weight:600;font-size:.9rem">Torneos</span>
+    </div>
+
+    @if (!Model.Tournaments.Any())
+    {
+        <div class="empty-box">
+            <div class="empty-icon">📋</div>
+            <h3>Sin torneos</h3>
+            <p>Crea el primer torneo para comenzar.</p>
+        </div>
+    }
+
+    @foreach (var t in Model.Tournaments)
+    {
+        <div class="admin-tournament-row">
+            <div class="admin-tour-info">
+                @if (t.LogoUrl != null) { <img src="@t.LogoUrl" class="admin-tour-logo" /> }
+                <div>
+                    <strong style="font-size:.88rem">@t.Name</strong>
+                    <span class="chip chip-@(t.Status == TournamentStatus.Active ? "green" : "gray")" style="margin-left:.4rem">
+                        @(t.Status == TournamentStatus.Active ? "Activo" : t.Status.ToString())
+                    </span>
+                </div>
+            </div>
+            <div class="admin-tour-actions">
+                <a asp-action="CreateStage" asp-route-id="@t.Id" class="btn btn-secondary btn-sm">Agregar fase</a>
+                <a asp-action="EditTournament" asp-route-id="@t.Id" class="btn btn-outline btn-sm">Editar</a>
+                <form asp-action="DeleteTournament" asp-route-id="@t.Id" method="post" style="display:inline"
+                      onsubmit="return confirm('¿Eliminar el torneo @t.Name y todos sus datos?')">
+                    @Html.AntiForgeryToken()
+                    <button class="btn btn-danger btn-sm">Eliminar</button>
+                </form>
+            </div>
+        </div>
+
+        @foreach (var s in t.Stages.OrderBy(s => s.OrderNum))
+        {
+            <div class="admin-stage-row">
+                <div style="display:flex;align-items:center;gap:.5rem;flex-wrap:wrap">
+                    <span class="admin-stage-name">@s.Name</span>
+                    <span class="chip chip-@(s.Status == StageStatus.Open ? "blue" : s.Status == StageStatus.Finished ? "gray" : s.Status == StageStatus.InProgress ? "green" : "amber")">
+                        @(s.Status == StageStatus.Open ? "Abierta" :
+                          s.Status == StageStatus.Finished ? "Finalizada" :
+                          s.Status == StageStatus.InProgress ? "Lista para calcular" : "Pendiente")
+                    </span>
+                    <span class="text-muted">$@s.EntryFee &mdash; cierre @s.PredictionDeadline.ToString("dd/MM HH:mm")</span>
+                </div>
+                <div class="admin-stage-actions">
+                    <form asp-action="SyncMatches" asp-route-id="@s.Id" method="post" style="display:inline">
+                        @Html.AntiForgeryToken()
+                        <button class="btn btn-secondary btn-sm">Sincronizar</button>
+                    </form>
+                    @if (s.Status != StageStatus.Finished)
+                    {
+                        <form asp-action="CalculatePoints" asp-route-id="@s.Id" method="post" style="display:inline"
+                              onsubmit="return confirm('¿Calcular puntos para @s.Name?')">
+                            @Html.AntiForgeryToken()
+                            <button class="btn btn-primary btn-sm">Calcular puntos</button>
+                        </form>
+                    }
+                    <a asp-controller="Leaderboard" asp-action="Index"
+                       asp-route-tournamentId="@t.Id" asp-route-stageId="@s.Id"
+                       class="btn btn-outline btn-sm">Clasificación</a>
+                    <a asp-action="Payments" asp-route-stageId="@s.Id"
+                       class="btn btn-secondary btn-sm">Pagos</a>
+                    <a asp-action="EditStage" asp-route-id="@s.Id"
+                       class="btn btn-outline btn-sm">Editar</a>
+                    <form asp-action="DeleteStage" asp-route-id="@s.Id" method="post" style="display:inline"
+                          onsubmit="return confirm('¿Eliminar la fase @s.Name?')">
+                        @Html.AntiForgeryToken()
+                        <button class="btn btn-danger btn-sm">Eliminar</button>
+                    </form>
+                </div>
+            </div>
+        }
+    }
+</div>
+
+@if (Model.RecentPayments.Any())
+{
+    <div class="card" style="padding:0;overflow:hidden;margin-top:1.2rem">
+        <div style="padding:.9rem 1.1rem;border-bottom:1px solid var(--border);background:var(--bg)">
+            <span style="font-weight:600;font-size:.9rem">Últimos comprobantes</span>
+        </div>
+        <div class="table-wrap">
+            <table class="lb-table">
+                <thead>
+                    <tr>
+                        <th>Participante</th>
+                        <th>Fase</th>
+                        <th>Monto</th>
+                        <th>Estado</th>
+                        <th>Fecha</th>
+                        <th>Comprobante</th>
+                    </tr>
+                </thead>
+                <tbody>
+                @foreach (var p in Model.RecentPayments)
+                {
+                    <tr>
+                        <td>
+                            <div style="font-weight:600;font-size:.85rem">@p.User.FullName</div>
+                            <div style="color:var(--text4);font-size:.74rem">@@@p.User.Username</div>
+                        </td>
+                        <td style="font-size:.84rem">@p.Stage.Name</td>
+                        <td style="font-weight:700">$@p.Amount</td>
+                        <td>
+                            <span class="chip chip-@(p.Status == PaymentStatus.Approved ? "green" : p.Status == PaymentStatus.Rejected ? "red" : "amber")">
+                                @(p.Status == PaymentStatus.Approved ? "Aprobado" :
+                                  p.Status == PaymentStatus.Rejected ? "Rechazado" : "Pendiente")
+                            </span>
+                        </td>
+                        <td style="color:var(--text3);font-size:.8rem">@p.CreatedAt.ToString("dd/MM HH:mm")</td>
+                        <td>
+                            @if (!string.IsNullOrEmpty(p.VoucherPath))
+                            {
+                                if (p.VoucherPath.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase))
+                                {
+                                    <a href="@p.VoucherPath" target="_blank" class="btn btn-secondary btn-sm">Ver PDF</a>
+                                }
+                                else
+                                {
+                                    <a href="@p.VoucherPath" target="_blank">
+                                        <img src="@p.VoucherPath" alt="Comprobante"
+                                             style="width:52px;height:36px;object-fit:cover;border-radius:4px;border:1px solid var(--border)" />
+                                    </a>
+                                }
+                            }
+                        </td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        </div>
+    </div>
+}

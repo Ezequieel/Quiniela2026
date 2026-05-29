@@ -1,0 +1,295 @@
+@model StageMatchesVm
+@{
+    ViewData["Title"] = Model.StageName;
+    var isMundial = ViewBag.IsMundial as bool? ?? false;
+    var isUcl    = ViewBag.IsUcl     as bool? ?? false;
+}
+
+@if (isUcl)
+{
+    <div class="ucl-hero">
+        <div class="ucl-badge">⭐ UEFA Champions League Final 2026 ⭐</div>
+        <h1 class="ucl-title">La <span>Gran Final</span></h1>
+        <p class="ucl-subtitle">Puskás Aréna · Budapest · 30 Mayo 2026</p>
+    </div>
+}
+@if (isMundial)
+{
+    <div class="wc-stage-header">
+        <a asp-controller="Tournament" asp-action="Index" class="breadcrumb">← @Model.TournamentName</a>
+        <h1>@Model.StageName</h1>
+        @if (Model.CanPredict)
+        {
+            <div class="deadline-bar">
+                Predicciones cierran el @TimeHelper.Format(Model.Deadline, "dd MMM yyyy") a las @TimeHelper.Format(Model.Deadline, "HH:mm") (hora SV)
+                &ensp;·&ensp;
+                <span id="countdown" class="countdown"></span>
+            </div>
+        }
+    </div>
+}
+else
+{
+    <div class="page-header">
+        <div>
+            <a asp-controller="Tournament" asp-action="Index" class="breadcrumb">← @Model.TournamentName</a>
+            <h1>@Model.StageName</h1>
+            @if (Model.CanPredict)
+            {
+                <div class="deadline-bar">
+                    Predicciones cierran el @TimeHelper.Format(Model.Deadline, "dd MMM yyyy") a las @TimeHelper.Format(Model.Deadline, "HH:mm") (hora SV)
+                    &ensp;·&ensp;
+                    <span id="countdown" class="countdown"></span>
+                </div>
+            }
+        </div>
+        <div class="header-actions">
+            <a asp-controller="Leaderboard" asp-action="Index"
+               asp-route-tournamentId="@Model.TournamentId" asp-route-stageId="@Model.StageId"
+               class="btn btn-secondary btn-sm">Clasificación</a>
+        </div>
+    </div>
+}
+
+@if (!Model.CanPredict && Model.Matches.Any(m => !m.IsFinished))
+{
+    <div class="info-banner @(isMundial ? "wc-theme" : "")" style="margin-bottom:1.2rem">
+        El período de predicciones ha cerrado para esta fase.
+    </div>
+}
+
+<div class="pts-legend @(isMundial ? "wc-theme" : "")">
+    <span>Marcador exacto — <strong>5 pts</strong></span>
+    <span>Solo resultado correcto — <strong>2 pts</strong></span>
+    <span>No aciertas nada — <strong>0 pts</strong></span>
+    <span style="color:var(--gold);font-size:.75rem">El puntaje no es acumulativo, se da el mayor nivel alcanzado</span>
+</div>
+
+<div class="matches-grid @(isMundial ? "wc-theme" : "")">
+@foreach (var m in Model.Matches)
+{
+    <div class="match-pred-card @(isMundial ? "wc-theme" : "") @(m.IsLive ? "is-live" : m.IsFinished ? "is-done" : "")"
+         id="mc-@m.Id">
+
+        <div class="match-state">
+            @if (m.IsLive)     { <span class="badge-live">En vivo @m.StatusLabel</span> }
+            else if (m.IsFinished) { <span class="badge-ft">Finalizado</span> }
+            else               { <span class="badge-ns">@m.StatusLabel</span> }
+        </div>
+
+        <div class="match-teams">
+            <div class="team team-home @(m.IsFinished && m.HomeScore > m.AwayScore ? "team-winner" : "")">
+                <span class="team-name">@m.HomeTeam</span>
+                <img src="@m.HomeTeamLogo" class="team-logo" onerror="this.style.display='none'" />
+            </div>
+            <div class="match-center">
+                @if (m.IsLive || m.IsFinished)
+                {
+                    <div class="live-score" id="score-@m.Id">
+                        @(m.HomeScore ?? 0)<span class="score-dash">–</span>@(m.AwayScore ?? 0)
+                    </div>
+                }
+                else { <div class="score-vs">vs</div> }
+            </div>
+            <div class="team team-away @(m.IsFinished && m.AwayScore > m.HomeScore ? "team-winner" : "")">
+                <img src="@m.AwayTeamLogo" class="team-logo" onerror="this.style.display='none'" />
+                <span class="team-name">@m.AwayTeam</span>
+            </div>
+        </div>
+
+        <div class="pred-section">
+            @if (!m.IsFinished && Model.CanPredict)
+            {
+                <div class="pred-label">¿Quién gana?</div>
+                <div class="pred-result-btns" id="res-@m.Id">
+                    <button class="pred-btn @(m.UserResult == "Home" ? "sel-home" : "")"
+                            onclick="setPred(@m.Id, 'Home', this)">@m.HomeTeam</button>
+                    <button class="pred-btn @(m.UserResult == "Draw" ? "sel-draw" : "")"
+                            onclick="setPred(@m.Id, 'Draw', this)">Empate</button>
+                    <button class="pred-btn @(m.UserResult == "Away" ? "sel-away" : "")"
+                            onclick="setPred(@m.Id, 'Away', this)">@m.AwayTeam</button>
+                </div>
+
+                <div class="pred-score-wrap" id="score-pred-@m.Id"
+                     style="@(m.UserResult == null ? "display:none" : "")">
+                    <div class="pred-label" style="margin-top:.6rem">
+                        Marcador exacto
+                        <span class="pts-bonus">+5 pts si aciertas</span>
+                    </div>
+                    <div class="score-inputs">
+                        <div class="score-input-group">
+                            <span class="score-team-mini">@m.HomeTeam</span>
+                            <input type="number" min="0" max="20" class="score-inp"
+                                   id="sh-@m.Id" value="@m.UserHomeScore"
+                                   onchange="saveScore(@m.Id)" />
+                        </div>
+                        <span class="score-input-sep">–</span>
+                        <div class="score-input-group">
+                            <span class="score-team-mini">@m.AwayTeam</span>
+                            <input type="number" min="0" max="20" class="score-inp"
+                                   id="sa-@m.Id" value="@m.UserAwayScore"
+                                   onchange="saveScore(@m.Id)" />
+                        </div>
+                    </div>
+                </div>
+                <div class="pred-save-status" id="status-@m.Id"></div>
+            }
+            else if (m.UserResult != null)
+            {
+                var resLabel = m.UserResult switch {
+                    "Home" => $"{m.HomeTeam} gana",
+                    "Draw" => "Empate",
+                    "Away" => $"{m.AwayTeam} gana",
+                    _      => m.UserResult
+                };
+                <div class="pred-result-summary @(m.ResultCorrect == true ? "correct" : m.IsFinished ? "wrong" : "pending")">
+                    <span class="pred-label-sm">Tu predicción</span>
+                    <strong>@resLabel</strong>
+                    @if (m.IsFinished)
+                    {
+                        if (m.ResultCorrect == true) { <span class="result-ok">Correcto +3 pts</span> }
+                        else                         { <span class="result-no">Incorrecto</span> }
+                    }
+                    @if (m.UserHomeScore.HasValue)
+                    {
+                        <div class="score-pred-display">
+                            Marcador predicho: @m.UserHomeScore – @m.UserAwayScore
+                            @if (m.IsFinished)
+                            {
+                                if (m.ScoreCorrect == true) { <span class="result-ok">Exacto +5 pts</span> }
+                                else                        { <span class="result-no">Incorrecto</span> }
+                            }
+                        </div>
+                    }
+                    @if (m.IsFinished && m.PointsEarned > 0)
+                    {
+                        <div><span class="total-pts-badge">+@m.PointsEarned pts en este partido</span></div>
+                    }
+                </div>
+            }
+            else if (!Model.CanPredict && !m.IsFinished)
+            {
+                <p class="text-muted" style="font-size:.78rem;text-align:center;padding:.4rem 0">Sin predicción registrada</p>
+            }
+        </div>
+    </div>
+}
+</div>
+
+@if (isMundial)
+{
+    <div style="text-align:center;margin-top:1.5rem">
+        <a asp-controller="Leaderboard" asp-action="Index"
+           asp-route-tournamentId="@Model.TournamentId" asp-route-stageId="@Model.StageId"
+           class="btn btn-wc">Ver clasificación</a>
+    </div>
+}
+
+@section Scripts {
+<script>
+const preds = {};
+@foreach (var m in Model.Matches.Where(m => m.UserResult != null))
+{
+    <text>preds[@m.Id] = { result: '@m.UserResult', home: @(m.UserHomeScore?.ToString() ?? "null"), away: @(m.UserAwayScore?.ToString() ?? "null") };</text>
+}
+
+function setPred(matchId, result, btn) {
+    const group = document.getElementById(`res-${matchId}`);
+    group.querySelectorAll('.pred-btn').forEach(b => b.className = b.className.replace(/sel-\w+/,'').trim());
+    btn.classList.add(`sel-${result === 'Home' ? 'home' : result === 'Draw' ? 'draw' : 'away'}`);
+    document.getElementById(`score-pred-${matchId}`).style.display = '';
+    if (!preds[matchId]) preds[matchId] = {};
+    preds[matchId].result = result;
+    adjustScore(matchId, result);
+    save(matchId);
+}
+
+function adjustScore(matchId, result) {
+    const hInput = document.getElementById(`sh-${matchId}`);
+    const aInput = document.getElementById(`sa-${matchId}`);
+    if (!hInput || !aInput) return;
+    const h = parseInt(hInput.value) || 0;
+    const a = parseInt(aInput.value) || 0;
+    if (result === 'Draw') {
+        const val = Math.max(h, a);
+        hInput.value = val; aInput.value = val;
+        hInput.oninput = () => { aInput.value = hInput.value; saveScore(matchId); };
+        aInput.oninput = () => { hInput.value = aInput.value; saveScore(matchId); };
+        // Guardar el marcador default inmediatamente
+        saveScore(matchId);
+    } else if (result === 'Home') {
+        // Asegurar que ambos campos tengan valor y local > visitante
+        if (aInput.value === '') aInput.value = 0;
+        if (hInput.value === '') hInput.value = 0;
+        const hv = parseInt(hInput.value), av = parseInt(aInput.value);
+        if (hv <= av) hInput.value = av + 1;
+        hInput.oninput = () => { validateScore(matchId, 'Home'); saveScore(matchId); };
+        aInput.oninput = () => { validateScore(matchId, 'Home'); saveScore(matchId); };
+        // Guardar el marcador default inmediatamente
+        saveScore(matchId);
+    } else {
+        // Asegurar que ambos campos tengan valor y visitante > local
+        if (hInput.value === '') hInput.value = 0;
+        if (aInput.value === '') aInput.value = 0;
+        const hv = parseInt(hInput.value), av = parseInt(aInput.value);
+        if (av <= hv) aInput.value = hv + 1;
+        hInput.oninput = () => { validateScore(matchId, 'Away'); saveScore(matchId); };
+        aInput.oninput = () => { validateScore(matchId, 'Away'); saveScore(matchId); };
+        // Guardar el marcador default inmediatamente
+        saveScore(matchId);
+    }
+}
+
+function validateScore(matchId, result) {
+    const h = parseInt(document.getElementById(`sh-${matchId}`)?.value) || 0;
+    const a = parseInt(document.getElementById(`sa-${matchId}`)?.value) || 0;
+    if (result === 'Home' && h <= a) document.getElementById(`sh-${matchId}`).value = a + 1;
+    else if (result === 'Away' && a <= h) document.getElementById(`sa-${matchId}`).value = h + 1;
+}
+
+function saveScore(matchId) {
+    if (!preds[matchId]?.result) return;
+    const hVal = document.getElementById(`sh-${matchId}`)?.value;
+    const aVal = document.getElementById(`sa-${matchId}`)?.value;
+    preds[matchId].home = (hVal !== '' && hVal != null) ? parseInt(hVal) : null;
+    preds[matchId].away = (aVal !== '' && aVal != null) ? parseInt(aVal) : null;
+    save(matchId);
+}
+
+async function save(matchId) {
+    const p = preds[matchId];
+    if (!p?.result) return;
+    const statusEl = document.getElementById(`status-${matchId}`);
+    statusEl.textContent = 'Guardando...';
+    statusEl.className   = 'pred-save-status saving';
+    try {
+        const res  = await fetch('/Prediction/Save', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json',
+                       'RequestVerificationToken': document.querySelector('input[name=__RequestVerificationToken]')?.value ?? '' },
+            body: JSON.stringify({ matchId, resultPred: p.result, homeScorePred: p.home ?? null, awayScorePred: p.away ?? null })
+        });
+        const data = await res.json();
+        statusEl.textContent = data.ok ? 'Guardado' : data.msg;
+        statusEl.className   = 'pred-save-status ' + (data.ok ? 'saved' : 'error');
+        setTimeout(() => { statusEl.textContent = ''; statusEl.className = 'pred-save-status'; }, 3000);
+    } catch {
+        statusEl.textContent = 'Error al guardar';
+        statusEl.className   = 'pred-save-status error';
+    }
+}
+
+const deadline = new Date('@Model.Deadline.ToString("yyyy-MM-ddTHH:mm:ss")Z');
+const cdEl = document.getElementById('countdown');
+if (cdEl) {
+    function tick() {
+        const d = deadline - Date.now();
+        if (d <= 0) { cdEl.textContent = 'Cerrado'; return; }
+        const h = Math.floor(d/3600000), m = Math.floor((d%3600000)/60000), s = Math.floor((d%60000)/1000);
+        cdEl.textContent = `${h}h ${m}m ${s}s`;
+    }
+    tick(); setInterval(tick, 1000);
+}
+</script>
+@Html.AntiForgeryToken()
+}

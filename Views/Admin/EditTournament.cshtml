@@ -1,0 +1,76 @@
+@model EditTournamentVm
+@{ ViewData["Title"] = "Editar torneo"; Layout = "~/Views/Shared/_Layout.cshtml"; }
+
+<div class="page-header">
+    <div>
+        <a href="/Admin/Index" class="breadcrumb">← Administración</a>
+        <h1>Editar torneo</h1>
+    </div>
+</div>
+
+<div class="card" style="max-width:620px">
+    <form asp-action="EditTournament" method="post" enctype="multipart/form-data">
+        @Html.AntiForgeryToken()
+        <input type="hidden" asp-for="Id" />
+        <div asp-validation-summary="All" class="val-summary"></div>
+
+        <div class="field">
+            <label asp-for="Name">Nombre del torneo</label>
+            <input asp-for="Name" class="input" />
+            <span asp-validation-for="Name" class="field-err"></span>
+        </div>
+        <div class="field">
+            <label asp-for="Description">Descripción</label>
+            <input asp-for="Description" class="input" />
+        </div>
+        <div class="field">
+            <label asp-for="Status">Estado</label>
+            <select asp-for="Status" class="input">
+                <option value="Draft">Borrador</option>
+                <option value="Active">Activo</option>
+                <option value="Finished">Finalizado</option>
+            </select>
+        </div>
+
+        <div class="divider"></div>
+        <p style="font-weight:700;font-size:.9rem;margin-bottom:1rem">Imágenes</p>
+
+        @if (!string.IsNullOrEmpty(Model.ExistingLogo))
+        {
+            <div style="margin-bottom:.8rem">
+                <p class="text-muted" style="font-size:.8rem;margin-bottom:.3rem">Logo actual:</p>
+                <img src="@Model.ExistingLogo" style="height:48px;object-fit:contain;border:1px solid var(--border);border-radius:6px;padding:4px" />
+            </div>
+        }
+        <div class="field">
+            <label asp-for="LogoFile">Nuevo logo <span class="hint">Dejar vacío para mantener el actual</span></label>
+            <input asp-for="LogoFile" type="file" accept="image/*" class="input-file" />
+        </div>
+
+        @if (!string.IsNullOrEmpty(Model.ExistingQr))
+        {
+            <div style="margin-bottom:.8rem">
+                <p class="text-muted" style="font-size:.8rem;margin-bottom:.3rem">QR actual:</p>
+                <img src="@Model.ExistingQr" style="height:80px;object-fit:contain;border:1px solid var(--border);border-radius:6px;padding:4px" />
+            </div>
+        }
+        <div class="field">
+            <label asp-for="QrFile">Nuevo QR <span class="hint">Dejar vacío para mantener el actual</span></label>
+            <input asp-for="QrFile" type="file" accept="image/*" class="input-file" />
+        </div>
+
+        <div class="field">
+            <label asp-for="PaymentUrl">URL alternativa de pago <span class="hint">Enlace directo si el usuario no puede escanear el QR</span></label>
+            <input asp-for="PaymentUrl" class="input" placeholder="https://link.pagadito.com/..." />
+        </div>
+        <div class="field">
+            <label asp-for="PaymentInfo">Instrucciones de pago</label>
+            <textarea asp-for="PaymentInfo" class="input" rows="4"></textarea>
+        </div>
+
+        <div style="display:flex;gap:.5rem">
+            <button type="submit" class="btn btn-primary">Guardar cambios</button>
+            <a href="/Admin/Index" class="btn btn-secondary">Cancelar</a>
+        </div>
+    </form>
+</div>

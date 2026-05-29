@@ -1,0 +1,63 @@
+@model CreateTournamentVm
+@{ ViewData["Title"] = "Nuevo torneo"; Layout = "~/Views/Shared/_Layout.cshtml"; }
+
+<div class="page-header">
+    <div>
+        <a href="/Admin/Index" class="breadcrumb">← Administración</a>
+        <h1>Crear torneo</h1>
+    </div>
+</div>
+
+<div class="card" style="max-width:620px">
+    <form asp-action="CreateTournament" method="post" enctype="multipart/form-data">
+        @Html.AntiForgeryToken()
+        <div asp-validation-summary="All" class="val-summary"></div>
+
+        <div class="field">
+            <label asp-for="Name">Nombre del torneo</label>
+            <input asp-for="Name" class="input" placeholder="Copa Presidente 2026" />
+            <span asp-validation-for="Name" class="field-err"></span>
+        </div>
+        <div class="field">
+            <label asp-for="Description">Descripción <span class="hint">Opcional</span></label>
+            <input asp-for="Description" class="input" placeholder="Descripción breve" />
+        </div>
+
+        <div class="fields-row">
+            <div class="field">
+                <label asp-for="ApiLeagueId">ID de liga en API-Football</label>
+                <input asp-for="ApiLeagueId" class="input" />
+                <span class="hint">La Liga = 140 · Premier = 39 · Copa Presidente SV = 1219</span>
+                <span asp-validation-for="ApiLeagueId" class="field-err"></span>
+            </div>
+            <div class="field">
+                <label asp-for="ApiSeason">Temporada</label>
+                <input asp-for="ApiSeason" class="input" />
+                <span class="hint">Año de inicio: 2025, 2026...</span>
+            </div>
+        </div>
+
+        <div class="field">
+            <label asp-for="LogoFile">Logo <span class="hint">Opcional — imagen del torneo</span></label>
+            <input asp-for="LogoFile" type="file" accept="image/*" class="input-file" />
+        </div>
+
+        <div class="divider"></div>
+        <p style="font-weight:700;font-size:.9rem;margin-bottom:1rem">Configuración de pago</p>
+
+        <div class="field">
+            <label asp-for="QrFile">Imagen del código QR de pago</label>
+            <input asp-for="QrFile" type="file" accept="image/*" class="input-file" required />
+            <span class="hint">Imagen QR del banco para que los participantes realicen el pago</span>
+            <span asp-validation-for="QrFile" class="field-err"></span>
+        </div>
+        <div class="field">
+            <label asp-for="PaymentInfo">Instrucciones de pago</label>
+            <textarea asp-for="PaymentInfo" class="input" rows="4"
+                      placeholder="Banco: XYZ&#10;Cuenta: 0001-2345&#10;A nombre de: Empresa SA"></textarea>
+            <span asp-validation-for="PaymentInfo" class="field-err"></span>
+        </div>
+
+        <button type="submit" class="btn btn-primary">Crear torneo</button>
+    </form>
+</div>

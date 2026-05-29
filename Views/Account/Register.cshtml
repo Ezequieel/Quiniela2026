@@ -1,0 +1,38 @@
+@model RegisterVm
+@{ ViewData["Title"] = "Crear cuenta"; Layout = "~/Views/Shared/_Layout.cshtml"; }
+
+<div class="auth-wrap auth-bg">
+  <div class="auth-card">
+    <div class="auth-logo">🏆</div>
+    <h1 class="auth-title">Crear cuenta</h1>
+    <p class="auth-sub">Únete a la quiniela y compite con tus compañeros</p>
+    <form asp-action="Register" method="post">
+      @Html.AntiForgeryToken()
+      <div asp-validation-summary="All" class="val-summary"></div>
+      <div class="field">
+        <label asp-for="FullName">Nombre completo</label>
+        <input asp-for="FullName" class="input" placeholder="Tu nombre" autocomplete="name" />
+        <span asp-validation-for="FullName" class="field-err"></span>
+      </div>
+      <div class="field">
+        <label asp-for="Username">Nombre de usuario</label>
+        <input asp-for="Username" class="input" placeholder="usuario123" autocomplete="username" />
+        <span asp-validation-for="Username" class="field-err"></span>
+      </div>
+      <div class="field">
+        <label asp-for="Email">Correo electrónico</label>
+        <input asp-for="Email" class="input" placeholder="correo@empresa.com" autocomplete="email" />
+        <span asp-validation-for="Email" class="field-err"></span>
+      </div>
+      <div class="field">
+        <label asp-for="Password">Contraseña</label>
+        <input asp-for="Password" class="input" type="password" placeholder="••••••••" autocomplete="new-password" />
+        <span asp-validation-for="Password" class="field-err"></span>
+      </div>
+      <button type="submit" class="btn btn-primary btn-full btn-lg" style="margin-top:.4rem">
+        Crear cuenta
+      </button>
+    </form>
+    <p class="auth-link">¿Ya tienes cuenta? <a asp-action="Login">Inicia sesión</a></p>
+  </div>
+</div>

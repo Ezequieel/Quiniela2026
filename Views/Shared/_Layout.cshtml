@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+    <meta name="theme-color" content="#0A0A0A" />
+    <title>@ViewData["Title"] — Quiniela Mundial</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="~/css/app.css" />
+    <link rel="stylesheet" href="~/css/mundial.css" />
+</head>
+<body>
+
+<nav class="navbar">
+    <div class="nav-inner">
+        <a class="nav-brand" asp-controller="Tournament" asp-action="Index">
+            Quiniela Mundial
+        </a>
+        @if (User.Identity?.IsAuthenticated == true)
+        {
+            <div class="nav-links">
+                <a asp-controller="Tournament" asp-action="Index">Torneos</a>
+                @if (User.IsInRole("Admin"))
+                {
+                    <a href="/Admin/Index" class="nav-admin">Administración</a>
+                }
+                <span class="nav-user">@User.FindFirst(System.Security.Claims.ClaimTypes.GivenName)?.Value</span>
+                <form asp-controller="Account" asp-action="Logout" method="post" style="display:inline">
+                    @Html.AntiForgeryToken()
+                    <button type="submit" class="btn-nav-exit">Salir</button>
+                </form>
+            </div>
+        }
+    </div>
+</nav>
+
+<main class="app-main">
+    @if (TempData["Success"] != null)
+    {
+        <div class="alert alert-ok">@TempData["Success"]</div>
+    }
+    @if (TempData["Error"] != null)
+    {
+        <div class="alert alert-err">@TempData["Error"]</div>
+    }
+    @RenderBody()
+</main>
+
+<footer class="app-footer">
+    <p>Quiniela Mundial &mdash; @DateTime.Now.Year</p>
+</footer>
+
+<script src="~/js/app.js"></script>
+@await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

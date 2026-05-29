@@ -1,0 +1,251 @@
+@model PredictionLogVm
+@{ ViewData["Title"] = "Registro de predicciones"; }
+
+<div class="page-header">
+    <div>
+        <a asp-controller="Tournament" asp-action="Index" class="breadcrumb">← Torneos</a>
+        <h1>Registro de predicciones</h1>
+        <p class="text-muted">@Model.TournamentName — @Model.TotalRows registros</p>
+    </div>
+    <button onclick="exportPdf()" class="btn btn-primary btn-sm">Exportar PDF</button>
+</div>
+
+<!-- Filtros -->
+<div class="log-filters">
+    <form method="get" class="log-filter-form">
+        <input type="hidden" name="tournamentId" value="@Model.TournamentId" />
+
+        <div class="log-filter-group">
+            <label>Filtrar por participante</label>
+            <select name="userId" class="input" onchange="this.form.submit()">
+                <option value="">Todos los participantes</option>
+                @foreach (var u in Model.Users)
+                {
+                    <option value="@u.UserId" selected="@(u.UserId == Model.FilterUserId)">
+                        @u.FullName (@@@u.Username)
+                    </option>
+                }
+            </select>
+        </div>
+
+        <div class="log-filter-group">
+            <label>Filtrar por partido</label>
+            <select name="matchId" class="input" onchange="this.form.submit()">
+                <option value="">Todos los partidos</option>
+                @foreach (var m in Model.Matches)
+                {
+                    <option value="@m.MatchId" selected="@(m.MatchId == Model.FilterMatchId)">
+                        @m.Label
+                    </option>
+                }
+            </select>
+        </div>
+
+        @if (Model.FilterUserId.HasValue || Model.FilterMatchId.HasValue)
+        {
+            <a asp-action="Log" asp-route-tournamentId="@Model.TournamentId"
+               class="btn btn-secondary btn-sm" style="align-self:flex-end">
+                Limpiar filtros
+            </a>
+        }
+    </form>
+
+    @if (!string.IsNullOrEmpty(Model.FilterUserName) || !string.IsNullOrEmpty(Model.FilterMatchName))
+    {
+        <div class="log-active-filters">
+            @if (!string.IsNullOrEmpty(Model.FilterUserName))
+            {
+                <span class="chip chip-amber">Participante: @Model.FilterUserName</span>
+            }
+            @if (!string.IsNullOrEmpty(Model.FilterMatchName))
+            {
+                <span class="chip chip-blue">Partido: @Model.FilterMatchName</span>
+            }
+        </div>
+    }
+</div>
+
+<!-- Tabla de registros -->
+<div class="card" style="padding:0;overflow:hidden">
+    @if (!Model.Rows.Any())
+    {
+        <div class="empty-box">
+            <div class="empty-icon">📋</div>
+            <h3>Sin predicciones</h3>
+            <p>No hay predicciones registradas con los filtros seleccionados.</p>
+        </div>
+    }
+    else
+    {
+        <div class="table-wrap">
+            <table class="lb-table log-table">
+                <thead>
+                    <tr>
+                        <th>Hora</th>
+                        <th>Participante</th>
+                        <th>Partido</th>
+                        <th>Fase</th>
+                        <th>Predicción</th>
+                        <th>Marcador pred.</th>
+                        <th>Resultado real</th>
+                        <th style="text-align:center">Pts</th>
+                    </tr>
+                </thead>
+                <tbody>
+                @foreach (var r in Model.Rows)
+                {
+                    <tr class="log-row
+                        @(r.IsFinished && r.ScoreCorrect == true ? "log-exact" :
+                          r.IsFinished && r.ResultCorrect == true ? "log-ok" :
+                          r.IsFinished && r.ResultCorrect == false ? "log-miss" : "")">
+
+                        <!-- Hora -->
+                        <td class="log-time">
+                            <span class="log-date">@TimeHelper.Format(r.UpdatedAt, "dd/MM")</span>
+                            <span class="log-hour">@TimeHelper.Format(r.UpdatedAt, "HH:mm")</span>
+                        </td>
+
+                        <!-- Participante -->
+                        <td>
+                            <div class="log-fullname">@r.FullName</div>
+                            <div class="log-username">@@@r.Username</div>
+                        </td>
+
+                        <!-- Partido -->
+                        <td class="log-match">
+                            <div class="log-match-teams">
+                                <img src="@r.HomeTeamLogo" class="log-logo" onerror="this.style.display='none'" />
+                                <span>@r.HomeTeam</span>
+                                <span class="log-vs">vs</span>
+                                <span>@r.AwayTeam</span>
+                                <img src="@r.AwayTeamLogo" class="log-logo" onerror="this.style.display='none'" />
+                            </div>
+                            <div class="log-match-date">@TimeHelper.Format(r.MatchDate, "dd/MM HH:mm")</div>
+                        </td>
+
+                        <!-- Fase -->
+                        <td class="log-stage">@r.StageName</td>
+
+                        <!-- Predicción de resultado -->
+                        <td>
+                            <span class="log-pred-result
+                                @(r.ResultPred == "Home" ? "pred-home" :
+                                  r.ResultPred == "Draw" ? "pred-draw" : "pred-away")">
+                                @r.ResultLabel
+                            </span>
+                        </td>
+
+                        <!-- Marcador predicho -->
+                        <td class="log-score-pred">@r.ScorePred</td>
+
+                        <!-- Resultado real -->
+                        <td class="log-score-real">
+                            @if (r.IsFinished)
+                            {
+                                <span class="log-real-score">@r.ScoreReal</span>
+                                if (r.ScoreCorrect == true)
+                                {
+                                    <span class="log-badge log-badge-exact">Exacto</span>
+                                }
+                                else if (r.ResultCorrect == true)
+                                {
+                                    <span class="log-badge log-badge-ok">Correcto</span>
+                                }
+                                else
+                                {
+                                    <span class="log-badge log-badge-miss">Incorrecto</span>
+                                }
+                            }
+                            else
+                            {
+                                <span class="log-pending">
+                                    @(r.MatchStatus == "1H" || r.MatchStatus == "2H" || r.MatchStatus == "HT"
+                                        ? "En vivo" : "Pendiente")
+                                </span>
+                            }
+                        </td>
+
+                        <!-- Puntos -->
+                        <td style="text-align:center">
+                            @if (r.IsFinished)
+                            {
+                                <span class="log-pts @(r.PointsEarned > 0 ? "log-pts-ok" : "log-pts-zero")">
+                                    @r.PointsEarned
+                                </span>
+                            }
+                            else { <span class="log-pts-pending">—</span> }
+                        </td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        </div>
+    }
+</div>
+
+@section Scripts {
+<style>
+@@media print {
+    .navbar, .app-footer, .log-filters, .page-header .btn,
+    .breadcrumb { display: none !important; }
+
+    body { background: #fff !important; color: #000 !important; font-size: 10px !important; }
+
+    .app-main { margin: 0 !important; padding: 0 !important; max-width: 100% !important; }
+
+    .page-header h1 { color: #000 !important; font-size: 14px !important; }
+    .page-header p   { color: #555 !important; }
+
+    .card { box-shadow: none !important; border: 1px solid #ccc !important; }
+
+    .lb-table { width: 100% !important; border-collapse: collapse !important; }
+    .lb-table thead th {
+        background: #1a1a2e !important;
+        color: #c9a84c !important;
+        padding: 5px 6px !important;
+        font-size: 8px !important;
+        border: 1px solid #ccc !important;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+    }
+    .lb-table tbody td {
+        padding: 4px 6px !important;
+        border: 1px solid #ddd !important;
+        color: #000 !important;
+        background: #fff !important;
+        font-size: 9px !important;
+    }
+    .log-exact td { background: #fffde7 !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+    .log-ok    td { background: #f1f8e9 !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+    .log-miss  td { background: #fce4e4 !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+
+    .log-pred-result, .log-badge {
+        border: 1px solid #ccc !important;
+        color: #000 !important;
+        background: #f5f5f5 !important;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+    }
+    .log-fullname { color: #000 !important; font-weight: bold !important; }
+    .log-username { color: #555 !important; }
+    .log-date, .log-hour { color: #000 !important; }
+    .log-match-teams { color: #000 !important; }
+    .log-stage { color: #555 !important; }
+    .log-real-score { color: #000 !important; }
+    .log-pts-ok   { color: #7a5c00 !important; }
+    .log-pts-zero { color: #999 !important; }
+
+    @@page {
+        size: A4 landscape;
+        margin: 1cm;
+    }
+}
+</style>
+<script>
+function exportPdf() {
+    // Agregar título de impresión
+    document.title = 'Predicciones — @Model.TournamentName — @DateTime.Now.ToString("dd/MM/yyyy")';
+    window.print();
+}
+</script>
+}

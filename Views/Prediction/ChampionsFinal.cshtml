@@ -1,0 +1,445 @@
+@model StageMatchesVm
+@{
+    ViewData["Title"] = "UCL Final 2026";
+    var match = Model.Matches.FirstOrDefault();
+}
+
+<div class="ucl-page">
+
+    <!-- Header -->
+    <div class="ucl-header">
+        <div class="ucl-header-top">
+            <span class="ucl-star-line">★ ★ ★ ★ ★ ★ ★ ★</span>
+            <span class="ucl-league-label">UEFA CHAMPIONS LEAGUE</span>
+            <span class="ucl-star-line">★ ★ ★ ★ ★ ★ ★ ★</span>
+        </div>
+        <div class="ucl-header-title">FINAL</div>
+        <div class="ucl-header-meta">Puskás Aréna · Budapest · 30 Mayo 2026 · 10:00 AM (SV)</div>
+    </div>
+
+    @if (!Model.CanPredict && match != null && !match.IsFinished)
+    {
+        <div class="ucl-closed-banner">PERÍODO DE PREDICCIONES CERRADO</div>
+    }
+
+    @if (match != null)
+    {
+        <!-- Match card -->
+        <div class="ucl-match">
+            <div class="ucl-match-team ucl-team-left">
+                <img src="@match.HomeTeamLogo" class="ucl-shield" onerror="this.style.display='none'" />
+                <div class="ucl-team-name-big">@match.HomeTeam.ToUpper()</div>
+                <div class="ucl-team-nation">FRANCIA</div>
+            </div>
+
+            <div class="ucl-match-center">
+                @if (match.IsLive || match.IsFinished)
+                {
+                    <div class="ucl-scoreboard">
+                        <span>@(match.HomeScore ?? 0)</span>
+                        <span class="ucl-sb-sep">–</span>
+                        <span>@(match.AwayScore ?? 0)</span>
+                    </div>
+                    @if (match.IsLive)
+                    {
+                        <div class="ucl-match-status ucl-live-status">EN VIVO · @match.StatusLabel</div>
+                    }
+                    else
+                    {
+                        <div class="ucl-match-status">FINAL</div>
+                    }
+                }
+                else
+                {
+                    <div class="ucl-vs-block">
+                        <div class="ucl-vs-line"></div>
+                        <span class="ucl-vs-label">VS</span>
+                        <div class="ucl-vs-line"></div>
+                    </div>
+                }
+            </div>
+
+            <div class="ucl-match-team ucl-team-right">
+                <img src="@match.AwayTeamLogo" class="ucl-shield" onerror="this.style.display='none'" />
+                <div class="ucl-team-name-big">@match.AwayTeam.ToUpper()</div>
+                <div class="ucl-team-nation">INGLATERRA</div>
+            </div>
+        </div>
+
+        <!-- Puntos legend -->
+        <div class="ucl-scoring-system">
+            <div class="ucl-ss-title">SISTEMA DE PUNTOS</div>
+            <div class="ucl-ss-rows">
+                <div class="ucl-ss-row ucl-ss-top"><span class="ucl-ss-pts">5</span><span class="ucl-ss-desc">Resultado + marcador exacto</span></div>
+                <div class="ucl-ss-row"><span class="ucl-ss-pts">3</span><span class="ucl-ss-desc">Solo resultado correcto</span></div>
+                <div class="ucl-ss-row"><span class="ucl-ss-pts">2</span><span class="ucl-ss-desc">Resultado primer tiempo · Tarjetas amarillas · Tarjetas rojas · Penal reglamentario</span></div>
+                <div class="ucl-ss-row"><span class="ucl-ss-pts">1</span><span class="ucl-ss-desc">Primer goleador · Ambos marcan · Total goles · Diferencia de goles</span></div>
+            </div>
+        </div>
+
+        @if (Model.CanPredict)
+        {
+            <div class="ucl-pred-form">
+
+                <!-- Resultado final -->
+                <div class="ucl-section">
+                    <div class="ucl-section-header">
+                        <div class="ucl-section-num">01</div>
+                        <div>
+                            <div class="ucl-section-title">RESULTADO FINAL</div>
+                            <div class="ucl-section-sub">Selecciona el ganador y el marcador exacto</div>
+                        </div>
+                        <div class="ucl-section-pts">5 PTS</div>
+                    </div>
+                    <div class="ucl-result-btns" id="res-@match.Id">
+                        <button class="ucl-result-btn @(match.UserResult == "Home" ? "ucl-btn-active" : "")"
+                                onclick="setPred(@match.Id, 'Home', this)">
+                            <img src="@match.HomeTeamLogo" class="ucl-btn-logo" onerror="this.style.display='none'" />
+                            @match.HomeTeam
+                        </button>
+                        <button class="ucl-result-btn ucl-draw-btn @(match.UserResult == "Draw" ? "ucl-btn-active-draw" : "")"
+                                onclick="setPred(@match.Id, 'Draw', this)">EMPATE</button>
+                        <button class="ucl-result-btn @(match.UserResult == "Away" ? "ucl-btn-active" : "")"
+                                onclick="setPred(@match.Id, 'Away', this)">
+                            @match.AwayTeam
+                            <img src="@match.AwayTeamLogo" class="ucl-btn-logo" onerror="this.style.display='none'" />
+                        </button>
+                    </div>
+                    <div class="ucl-score-section" id="score-pred-@match.Id"
+                         style="@(match.UserResult == null ? "display:none" : "")">
+                        <div class="ucl-score-label">MARCADOR EXACTO <span class="ucl-pts-badge">+5 PTS</span></div>
+                        <div class="ucl-score-inputs">
+                            <div class="ucl-score-inp-wrap">
+                                <div class="ucl-score-inp-team">@match.HomeTeam.ToUpper()</div>
+                                <input type="number" min="0" max="20" class="ucl-num-inp"
+                                       id="sh-@match.Id" value="@match.UserHomeScore"
+                                       onchange="saveScore(@match.Id)" />
+                            </div>
+                            <div class="ucl-score-inp-dash">–</div>
+                            <div class="ucl-score-inp-wrap">
+                                <div class="ucl-score-inp-team">@match.AwayTeam.ToUpper()</div>
+                                <input type="number" min="0" max="20" class="ucl-num-inp"
+                                       id="sa-@match.Id" value="@match.UserAwayScore"
+                                       onchange="saveScore(@match.Id)" />
+                            </div>
+                        </div>
+                    </div>
+                    <div class="ucl-status-line" id="status-@match.Id"></div>
+                </div>
+
+                <!-- Primer tiempo -->
+                <div class="ucl-section">
+                    <div class="ucl-section-header">
+                        <div class="ucl-section-num">02</div>
+                        <div>
+                            <div class="ucl-section-title">PRIMER TIEMPO</div>
+                            <div class="ucl-section-sub">Marcador al descanso</div>
+                        </div>
+                        <div class="ucl-section-pts">2 PTS</div>
+                    </div>
+                    <div class="ucl-score-inputs">
+                        <div class="ucl-score-inp-wrap">
+                            <div class="ucl-score-inp-team">@match.HomeTeam.ToUpper()</div>
+                            <input type="number" min="0" max="20" class="ucl-num-inp"
+                                   id="ht-h" value="@match.Special?.HtHomePred"
+                                   onchange="saveSpecial()" placeholder="0" />
+                        </div>
+                        <div class="ucl-score-inp-dash">–</div>
+                        <div class="ucl-score-inp-wrap">
+                            <div class="ucl-score-inp-team">@match.AwayTeam.ToUpper()</div>
+                            <input type="number" min="0" max="20" class="ucl-num-inp"
+                                   id="ht-a" value="@match.Special?.HtAwayPred"
+                                   onchange="saveSpecial()" placeholder="0" />
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tarjetas -->
+                <div class="ucl-section">
+                    <div class="ucl-section-header">
+                        <div class="ucl-section-num">03</div>
+                        <div>
+                            <div class="ucl-section-title">DISCIPLINA</div>
+                            <div class="ucl-section-sub">Cantidad exacta de tarjetas en el partido</div>
+                        </div>
+                        <div class="ucl-section-pts">2 PTS C/U</div>
+                    </div>
+                    <div class="ucl-cards-row">
+                        <div class="ucl-card-field">
+                            <div class="ucl-card-header">
+                                <div class="ucl-card-rect ucl-yellow-card"></div>
+                                <span>AMARILLAS</span>
+                            </div>
+                            <input type="number" min="0" max="20" class="ucl-num-inp ucl-num-lg"
+                                   id="yellows" value="@match.Special?.YellowCardsPred"
+                                   onchange="saveSpecial()" placeholder="0" />
+                        </div>
+                        <div class="ucl-card-divider"></div>
+                        <div class="ucl-card-field">
+                            <div class="ucl-card-header">
+                                <div class="ucl-card-rect ucl-red-card"></div>
+                                <span>ROJAS</span>
+                            </div>
+                            <input type="number" min="0" max="10" class="ucl-num-inp ucl-num-lg"
+                                   id="reds" value="@match.Special?.RedCardsPred"
+                                   onchange="saveSpecial()" placeholder="0" />
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Penal -->
+                <div class="ucl-section">
+                    <div class="ucl-section-header">
+                        <div class="ucl-section-num">04</div>
+                        <div>
+                            <div class="ucl-section-title">PENAL EN TIEMPO REGLAMENTARIO</div>
+                            <div class="ucl-section-sub">¿Se cobrará un penalti antes del minuto 90?</div>
+                        </div>
+                        <div class="ucl-section-pts">2 PTS</div>
+                    </div>
+                    <div class="ucl-toggle-row">
+                        <button class="ucl-toggle-btn @(match.Special?.HasPenaltyPred == true ? "ucl-toggle-yes" : "")"
+                                id="pen-yes" onclick="setPenalty(true)">SÍ</button>
+                        <button class="ucl-toggle-btn @(match.Special?.HasPenaltyPred == false ? "ucl-toggle-no" : "")"
+                                id="pen-no" onclick="setPenalty(false)">NO</button>
+                    </div>
+                </div>
+
+                <!-- Primer gol -->
+                <div class="ucl-section">
+                    <div class="ucl-section-header">
+                        <div class="ucl-section-num">05</div>
+                        <div>
+                            <div class="ucl-section-title">PRIMER GOLEADOR</div>
+                            <div class="ucl-section-sub">¿Qué equipo rompe el cero primero?</div>
+                        </div>
+                        <div class="ucl-section-pts">1 PT</div>
+                    </div>
+                    <div class="ucl-result-btns" id="first-scorer-btns">
+                        <button class="ucl-result-btn @(match.Special?.FirstScorerPred == 1 ? "ucl-btn-active" : "")"
+                                onclick="setFirstScorer(1)">
+                            <img src="@match.HomeTeamLogo" class="ucl-btn-logo" onerror="this.style.display='none'" />
+                            @match.HomeTeam
+                        </button>
+                        <button class="ucl-result-btn ucl-draw-btn @(match.Special?.FirstScorerPred == 0 ? "ucl-btn-active-draw" : "")"
+                                onclick="setFirstScorer(0)">0 — 0</button>
+                        <button class="ucl-result-btn @(match.Special?.FirstScorerPred == 2 ? "ucl-btn-active" : "")"
+                                onclick="setFirstScorer(2)">
+                            @match.AwayTeam
+                            <img src="@match.AwayTeamLogo" class="ucl-btn-logo" onerror="this.style.display='none'" />
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Stats finales -->
+                <div class="ucl-section">
+                    <div class="ucl-section-header">
+                        <div class="ucl-section-num">06</div>
+                        <div>
+                            <div class="ucl-section-title">ESTADÍSTICAS</div>
+                            <div class="ucl-section-sub">Predicciones adicionales del partido</div>
+                        </div>
+                        <div class="ucl-section-pts">1 PT C/U</div>
+                    </div>
+
+                    <div class="ucl-stats-grid">
+                        <div class="ucl-stat-item">
+                            <div class="ucl-stat-item-label">¿AMBOS EQUIPOS MARCAN?</div>
+                            <div class="ucl-toggle-row">
+                                <button class="ucl-toggle-btn ucl-toggle-sm @(match.Special?.BothScoredPred == true ? "ucl-toggle-yes" : "")"
+                                        id="both-yes" onclick="setBothScored(true)">SÍ</button>
+                                <button class="ucl-toggle-btn ucl-toggle-sm @(match.Special?.BothScoredPred == false ? "ucl-toggle-no" : "")"
+                                        id="both-no" onclick="setBothScored(false)">NO</button>
+                            </div>
+                        </div>
+                        <div class="ucl-stat-item">
+                            <div class="ucl-stat-item-label">TOTAL DE GOLES</div>
+                            <input type="number" min="0" max="20" class="ucl-num-inp"
+                                   id="total-goals" value="@match.Special?.TotalGoalsPred"
+                                   onchange="saveSpecial()" placeholder="0" />
+                        </div>
+                        <div class="ucl-stat-item">
+                            <div class="ucl-stat-item-label">DIFERENCIA DE GOLES
+                                <span class="ucl-hint-text">+ si gana @match.HomeTeam · − si gana @match.AwayTeam</span>
+                            </div>
+                            <input type="number" min="-10" max="10" class="ucl-num-inp"
+                                   id="goal-diff" value="@match.Special?.GoalDiffPred"
+                                   onchange="saveSpecial()" placeholder="0" />
+                        </div>
+                    </div>
+                </div>
+
+                <div class="ucl-save-bar" id="special-status"></div>
+
+            </div>
+        }
+        else if (match.IsFinished && match.UserResult != null)
+        {
+            <div class="ucl-results-section">
+                <div class="ucl-results-title">TUS RESULTADOS</div>
+                <div class="ucl-results-total">@match.PointsEarned <span>PTS</span></div>
+            </div>
+        }
+
+        @if (match.IsLive || match.IsFinished)
+        {
+            <div class="ucl-live-ranking" id="live-ranking">
+                <div class="ucl-live-header">
+                    @if (match.IsLive)
+                    {
+                        <span class="ucl-live-dot"></span>
+                        <span>CLASIFICACIÓN EN VIVO</span>
+                        <span class="ucl-live-ts" id="last-update"></span>
+                    }
+                    else { <span>CLASIFICACIÓN FINAL</span> }
+                </div>
+                <div id="live-ranking-rows"><div class="ucl-live-loading">Cargando...</div></div>
+            </div>
+        }
+    }
+
+    <div class="ucl-footer-action">
+        <a asp-controller="Leaderboard" asp-action="Index"
+           asp-route-tournamentId="@Model.TournamentId"
+           class="btn btn-wc">VER CLASIFICACIÓN</a>
+    </div>
+
+</div>
+
+@section Scripts {
+<script>
+const matchId = @(match?.Id ?? 0);
+const preds = {};
+@if (match?.UserResult != null) {
+    <text>preds[matchId] = { result: '@match.UserResult', home: @(match.UserHomeScore?.ToString() ?? "null"), away: @(match.UserAwayScore?.ToString() ?? "null") };</text>
+}
+const special = {
+    hasP:  @(match?.Special?.HasPenaltyPred == null ? "null" : match.Special.HasPenaltyPred == true ? "true" : "false"),
+    firstS:@(match?.Special?.FirstScorerPred?.ToString() ?? "null"),
+    bothS: @(match?.Special?.BothScoredPred == null ? "null" : match.Special.BothScoredPred == true ? "true" : "false"),
+};
+
+function setPred(matchId, result, btn) {
+    document.getElementById('res-' + matchId).querySelectorAll('.ucl-result-btn').forEach(b => {
+        b.className = b.className.replace(/ucl-btn-active(-draw)?/g,'').trim();
+    });
+    btn.classList.add(result === 'Draw' ? 'ucl-btn-active-draw' : 'ucl-btn-active');
+    document.getElementById('score-pred-' + matchId).style.display = '';
+    if (!preds[matchId]) preds[matchId] = {};
+    preds[matchId].result = result;
+    adjustScore(matchId, result);
+    save(matchId);
+}
+function adjustScore(matchId, result) {
+    const h = document.getElementById('sh-' + matchId);
+    const a = document.getElementById('sa-' + matchId);
+    if (!h || !a) return;
+    if (a.value === '') a.value = 0;
+    if (h.value === '') h.value = 0;
+    const hv = parseInt(h.value), av = parseInt(a.value);
+    if (result === 'Draw') {
+        const v = Math.max(hv, av); h.value = v; a.value = v;
+        h.oninput = () => { a.value = h.value; saveScore(matchId); };
+        a.oninput = () => { h.value = a.value; saveScore(matchId); };
+    } else if (result === 'Home') {
+        if (hv <= av) h.value = av + 1;
+        h.oninput = () => { if(parseInt(h.value)<=parseInt(a.value)) h.value=parseInt(a.value)+1; saveScore(matchId); };
+        a.oninput = () => { if(parseInt(h.value)<=parseInt(a.value)) h.value=parseInt(a.value)+1; saveScore(matchId); };
+    } else {
+        if (av <= hv) a.value = hv + 1;
+        h.oninput = () => { if(parseInt(a.value)<=parseInt(h.value)) a.value=parseInt(h.value)+1; saveScore(matchId); };
+        a.oninput = () => { if(parseInt(a.value)<=parseInt(h.value)) a.value=parseInt(h.value)+1; saveScore(matchId); };
+    }
+    saveScore(matchId);
+}
+function saveScore(matchId) {
+    if (!preds[matchId]?.result) return;
+    const hv = document.getElementById('sh-' + matchId)?.value;
+    const av = document.getElementById('sa-' + matchId)?.value;
+    preds[matchId].home = (hv !== '' && hv != null) ? parseInt(hv) : null;
+    preds[matchId].away = (av !== '' && av != null) ? parseInt(av) : null;
+    save(matchId);
+}
+async function save(matchId) {
+    const p = preds[matchId];
+    if (!p?.result) return;
+    const el = document.getElementById('status-' + matchId);
+    el.textContent = 'Guardando...'; el.className = 'ucl-status-line ucl-saving';
+    try {
+        const r = await fetch('/Prediction/Save', {
+            method:'POST', headers:{'Content-Type':'application/json','RequestVerificationToken':document.querySelector('input[name=__RequestVerificationToken]')?.value??''},
+            body:JSON.stringify({matchId,resultPred:p.result,homeScorePred:p.home,awayScorePred:p.away})
+        });
+        const d = await r.json();
+        el.textContent = d.ok ? 'Guardado' : d.msg;
+        el.className = 'ucl-status-line ' + (d.ok ? 'ucl-saved' : 'ucl-error');
+        setTimeout(()=>{el.textContent='';el.className='ucl-status-line';},3000);
+    } catch { el.textContent='Error'; el.className='ucl-status-line ucl-error'; }
+}
+function setPenalty(val) {
+    special.hasP = val;
+    document.getElementById('pen-yes').className = 'ucl-toggle-btn' + (val===true ?' ucl-toggle-yes':'');
+    document.getElementById('pen-no' ).className = 'ucl-toggle-btn' + (val===false?' ucl-toggle-no':'');
+    saveSpecial();
+}
+function setFirstScorer(val) {
+    special.firstS = val;
+    const btns = document.getElementById('first-scorer-btns').querySelectorAll('.ucl-result-btn');
+    btns[0].className = 'ucl-result-btn' + (val===1?' ucl-btn-active':'');
+    btns[1].className = 'ucl-result-btn ucl-draw-btn' + (val===0?' ucl-btn-active-draw':'');
+    btns[2].className = 'ucl-result-btn' + (val===2?' ucl-btn-active':'');
+    saveSpecial();
+}
+function setBothScored(val) {
+    special.bothS = val;
+    document.getElementById('both-yes').className = 'ucl-toggle-btn ucl-toggle-sm' + (val===true ?' ucl-toggle-yes':'');
+    document.getElementById('both-no' ).className = 'ucl-toggle-btn ucl-toggle-sm' + (val===false?' ucl-toggle-no':'');
+    saveSpecial();
+}
+let saveTimer = null;
+function saveSpecial() {
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(async () => {
+        const el = document.getElementById('special-status');
+        el.textContent = 'Guardando...'; el.className = 'ucl-save-bar ucl-saving';
+        const v = id => { const e=document.getElementById(id); return e&&e.value!==''?parseInt(e.value):null; };
+        try {
+            const r = await fetch('/Prediction/SaveSpecial', {
+                method:'POST', headers:{'Content-Type':'application/json','RequestVerificationToken':document.querySelector('input[name=__RequestVerificationToken]')?.value??''},
+                body:JSON.stringify({matchId,htHomePred:v('ht-h'),htAwayPred:v('ht-a'),yellowCardsPred:v('yellows'),redCardsPred:v('reds'),hasPenaltyPred:special.hasP,firstScorerPred:special.firstS,bothScoredPred:special.bothS,totalGoalsPred:v('total-goals'),goalDiffPred:v('goal-diff')})
+            });
+            const d = await r.json();
+            el.textContent = d.ok ? 'Predicciones guardadas' : d.msg;
+            el.className = 'ucl-save-bar ' + (d.ok ? 'ucl-saved':'ucl-error');
+            setTimeout(()=>{el.textContent='';el.className='ucl-save-bar';},3000);
+        } catch { el.textContent='Error'; el.className='ucl-save-bar ucl-error'; }
+    }, 600);
+}
+</script>
+@Html.AntiForgeryToken()
+
+@if (match != null && (match.IsLive || match.IsFinished))
+{
+<script>
+const stageId = @Model.StageId;
+const isLive  = @(match.IsLive ? "true" : "false");
+async function fetchLiveRanking() {
+    try {
+        const res  = await fetch('/Prediction/LiveRanking?stageId=' + stageId);
+        const data = await res.json();
+        if (!data.rows || data.rows.length === 0) return;
+        document.getElementById('last-update') && (document.getElementById('last-update').textContent = new Date().toLocaleTimeString('es-SV',{hour:'2-digit',minute:'2-digit',second:'2-digit'}));
+        document.getElementById('live-ranking-rows').innerHTML = data.rows.map((r,i) =>
+            '<div class="ucl-live-row">' +
+            '<span class="ucl-live-pos">' + (i===0?'01':i===1?'02':i===2?'03':'0'+(i+1)) + '</span>' +
+            '<span class="ucl-live-name">' + r.name.toUpperCase() + '</span>' +
+            '<span class="ucl-live-pred">' + r.scorePred + '</span>' +
+            '<span class="ucl-live-pts">' + r.pts + '<small> PTS</small></span>' +
+            '</div>').join('');
+    } catch(e) {}
+}
+fetchLiveRanking();
+if (isLive) setInterval(fetchLiveRanking, 15000);
+</script>
+}
+}

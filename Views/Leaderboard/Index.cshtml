@@ -1,0 +1,115 @@
+@model LeaderboardVm
+@{
+    ViewData["Title"] = "Clasificación — " + Model.TournamentName;
+    var isMundial = ViewBag.IsMundial as bool? ?? false;
+}
+
+@if (isMundial)
+{
+    <div class="lb-wc-header">
+        <div class="lb-wc-title">🏆 @Model.TournamentName</div>
+        <div class="lb-wc-sub">Tabla de clasificación</div>
+    </div>
+}
+else
+{
+    <div class="page-header">
+        <div>
+            <a asp-controller="Tournament" asp-action="Index" class="breadcrumb">← Torneos</a>
+            <h1>@Model.TournamentName</h1>
+        </div>
+@if (ViewBag.LogVisible == true)
+        {
+            <a asp-controller="History" asp-action="Log" asp-route-tournamentId="@Model.TournamentId"
+               class="btn btn-outline btn-sm">Registro de predicciones</a>
+        }
+    </div>
+}
+
+<div class="lb-tabs">
+    <a href="@Url.Action("Index", new { tournamentId = Model.TournamentId })"
+       class="lb-tab @(!Model.IsStageView ? "active" : "")">General</a>
+    @foreach (var s in Model.Stages)
+    {
+        <a href="@Url.Action("Index", new { tournamentId = Model.TournamentId, stageId = s.Id })"
+           class="lb-tab @(s.Id == Model.StageId ? "active" : "")">@s.Name</a>
+    }
+</div>
+
+<div class="card" style="padding:0;overflow:hidden">
+    @if (Model.IsStageView)
+    {
+        <div class="lb-subtitle">
+            Resultados — @Model.StageName
+        </div>
+    }
+
+    @if (!Model.Rows.Any())
+    {
+        <div class="empty-box">
+            <div class="empty-icon">📊</div>
+            <h3>Sin resultados</h3>
+            <p>Aquí aparecerán las posiciones cuando los participantes hagan sus predicciones.</p>
+        </div>
+    }
+    else
+    {
+        <div class="table-wrap">
+            <table class="lb-table">
+                <thead>
+                    <tr>
+                        <th style="width:44px">#</th>
+                        <th>Participante</th>
+                        @if (Model.IsStageView)
+                        {
+                            <th style="text-align:center">Resultados</th>
+                            <th style="text-align:center">Exactos</th>
+                        }
+                        <th style="text-align:right;padding-right:1.1rem">Puntos</th>
+                        <th style="width:60px"></th>
+                    </tr>
+                </thead>
+                <tbody>
+                @foreach (var r in Model.Rows)
+                {
+                    <tr class="@(r.IsCurrentUser ? "lb-me" : "") @(r.Rank == 1 ? "lb-top1" : r.Rank == 2 ? "lb-top2" : r.Rank == 3 ? "lb-top3" : "")">
+                        <td class="lb-rank">
+                            @if (r.Rank <= 3) { <span>@r.Medal</span> }
+                            else { <span style="color:#999">@r.Rank</span> }
+                        </td>
+                        <td>
+                            <div class="lb-user">
+                                <div class="lb-avatar">@r.Username[0].ToString().ToUpper()</div>
+                                <div>
+                                    <div class="lb-username">
+                                        @r.FullName
+                                        @if (r.IsCurrentUser)
+                                        {
+                                            <span style="color:#D42B2B;font-size:.72rem;font-weight:700;margin-left:.3rem">(tú)</span>
+                                        }
+                                    </div>
+                                    <div class="lb-handle">@@@r.Username</div>
+                                </div>
+                            </div>
+                        </td>
+                        @if (Model.IsStageView)
+                        {
+                            <td class="lb-stat">@r.ResultHits</td>
+                            <td class="lb-stat">@r.ScoreHits</td>
+                        }
+                        <td class="lb-pts" style="text-align:right;padding-right:1.1rem">@r.TotalPoints</td>
+                        <td style="text-align:right;padding-right:.8rem">
+                            <a asp-controller="History" asp-action="Log"
+                               asp-route-tournamentId="@Model.TournamentId"
+                               asp-route-userId="@r.UserId"
+                               class="btn btn-outline btn-sm" style="font-size:.72rem">
+                                Ver
+                            </a>
+                        </td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        </div>
+    }
+</div>
