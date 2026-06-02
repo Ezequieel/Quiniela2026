@@ -27,9 +27,6 @@ namespace QuinielaApp.ViewModels
         [Required][StringLength(100, MinimumLength = 6, ErrorMessage = "Mínimo 6 caracteres")]
         [DataType(DataType.Password)]
         public string Password { get; set; } = string.Empty;
-        [Compare("Password", ErrorMessage = "Las contraseñas no coinciden")]
-        [DataType(DataType.Password)]
-        public string ConfirmPassword { get; set; } = string.Empty;
     }
 
     // ── Home / torneos disponibles ────────────────────────

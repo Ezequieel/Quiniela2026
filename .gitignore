@@ -1,0 +1,15 @@
+# Build outputs
+bin/
+obj/
+
+# User-uploaded files (preserved outside deploy via symlink)
+wwwroot/uploads/
+
+# Environment / secrets
+appsettings.Production.json
+*.pfx
+*.key
+
+# IDE
+.vs/
+*.user
