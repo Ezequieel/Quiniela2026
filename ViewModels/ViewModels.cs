@@ -59,7 +59,8 @@ namespace QuinielaApp.ViewModels
         public decimal  EntryFee    { get; set; }
         public DateTime Deadline    { get; set; }
         public int      TotalMatches{ get; set; }
-        public bool     IsPaid      { get; set; }   // el usuario pagó esta fase
+        public bool     IsPaid          { get; set; }
+        public bool     HasPendingPayment { get; set; }
         public bool     CanPredict  { get; set; }
         public int      MyPoints    { get; set; }
         public int      MyRank      { get; set; }
@@ -75,6 +76,8 @@ namespace QuinielaApp.ViewModels
         public string? PaymentQrPath { get; set; }
         public string? PaymentInfo   { get; set; }
         public string? PaymentUrl    { get; set; }
+        // Fases cubiertas por este pago (GroupKey o solo esta fase)
+        public List<string> RelatedStageNames { get; set; } = new();
         // Upload
         [Required(ErrorMessage = "Sube tu comprobante de pago")]
         public IFormFile? Voucher  { get; set; }

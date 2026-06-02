@@ -74,9 +74,11 @@ namespace QuinielaApp.Controllers
     public class TournamentController : Controller
     {
         private readonly AppDbContext _db;
+        private readonly PaymentService _paymentSvc;
         private int Uid => int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
 
-        public TournamentController(AppDbContext db) => _db = db;
+        public TournamentController(AppDbContext db, PaymentService paymentSvc)
+        { _db = db; _paymentSvc = paymentSvc; }
 
         public async Task<IActionResult> Index()
         {
@@ -128,20 +130,22 @@ namespace QuinielaApp.Controllers
                     var total = await _db.StageEntries.CountAsync(e => e.StageId == s.Id);
                     var matchCount = await _db.Matches.CountAsync(m => m.StageId == s.Id);
 
+                    var hasPending = !paid && await _paymentSvc.UserHasPendingPaymentAsync(uid, s.Id);
                     card.Stages.Add(new StageCardVm
                     {
-                        Id          = s.Id,
-                        Name        = s.Name,
-                        Type        = s.Type.ToString(),
-                        Status      = s.Status.ToString(),
-                        EntryFee    = s.EntryFee,
-                        Deadline    = s.PredictionDeadline,
-                        TotalMatches= matchCount,
-                        IsPaid      = paid,
-                        CanPredict  = paid && s.Status != StageStatus.Finished
-                                   && s.PredictionDeadline > DateTime.UtcNow,
-                        MyPoints    = se?.Points ?? 0,
-                        MyRank      = rank,
+                        Id                = s.Id,
+                        Name              = s.Name,
+                        Type              = s.Type.ToString(),
+                        Status            = s.Status.ToString(),
+                        EntryFee          = s.EntryFee,
+                        Deadline          = s.PredictionDeadline,
+                        TotalMatches      = matchCount,
+                        IsPaid            = paid,
+                        HasPendingPayment = hasPending,
+                        CanPredict        = paid && s.Status != StageStatus.Finished
+                                         && s.PredictionDeadline > DateTime.UtcNow,
+                        MyPoints          = se?.Points ?? 0,
+                        MyRank            = rank,
                         TotalParticipants = total
                     });
                 }
@@ -167,22 +171,44 @@ namespace QuinielaApp.Controllers
         [HttpGet]
         public async Task<IActionResult> Pay(int stageId)
         {
-            var stage = await _db.Stages.Include(s => s.Tournament)
+            var stage = await _db.Stages
+                .Include(s => s.Tournament).ThenInclude(t => t.Stages)
                 .FirstOrDefaultAsync(s => s.Id == stageId);
             if (stage == null) return NotFound();
 
-            // Si ya pagó, redirigir a predicciones
             if (await _paymentSvc.UserPaidStageAsync(Uid, stageId))
                 return RedirectToAction("Stage", "Prediction", new { stageId });
 
+            // Si viene del redirect post-submit, mostrar pantalla de confirmación
+            if (TempData["Info"] is string confirmMsg)
+            {
+                ViewBag.ConfirmMsg = confirmMsg;
+                return View(new PaymentVm { StageId = stageId, StageName = stage.Name });
+            }
+
+            if (await _paymentSvc.UserHasPendingPaymentAsync(Uid, stageId))
+            {
+                TempData["Info"] = "Tu comprobante está en revisión. El administrador te dará acceso en breve.";
+                return RedirectToAction("Index", "Tournament");
+            }
+
+            var relatedStages = string.IsNullOrEmpty(stage.GroupKey)
+                ? new List<string> { stage.Name }
+                : stage.Tournament.Stages
+                    .Where(s => s.GroupKey == stage.GroupKey)
+                    .OrderBy(s => s.OrderNum)
+                    .Select(s => s.Name)
+                    .ToList();
+
             return View(new PaymentVm
             {
-                StageId       = stageId,
-                StageName     = stage.Name,
-                EntryFee      = stage.EntryFee,
-                PaymentQrPath = stage.Tournament.PaymentQrPath,
-                PaymentInfo   = stage.Tournament.PaymentInfo,
-                PaymentUrl    = stage.Tournament.PaymentUrl
+                StageId           = stageId,
+                StageName         = stage.Name,
+                EntryFee          = stage.EntryFee,
+                PaymentQrPath     = stage.Tournament.PaymentQrPath,
+                PaymentInfo       = stage.Tournament.PaymentInfo,
+                PaymentUrl        = stage.Tournament.PaymentUrl,
+                RelatedStageNames = relatedStages
             });
         }
 
@@ -191,17 +217,24 @@ namespace QuinielaApp.Controllers
         {
             if (!ModelState.IsValid)
             {
-                var stage = await _db.Stages.Include(s => s.Tournament)
+                var stage = await _db.Stages
+                    .Include(s => s.Tournament).ThenInclude(t => t.Stages)
                     .FirstOrDefaultAsync(s => s.Id == vm.StageId);
-                vm.PaymentQrPath = stage?.Tournament.PaymentQrPath;
-                vm.PaymentInfo   = stage?.Tournament.PaymentInfo;
-                vm.PaymentUrl    = stage?.Tournament.PaymentUrl;
+                vm.PaymentQrPath     = stage?.Tournament.PaymentQrPath;
+                vm.PaymentInfo       = stage?.Tournament.PaymentInfo;
+                vm.PaymentUrl        = stage?.Tournament.PaymentUrl;
+                vm.RelatedStageNames = stage == null ? new() :
+                    string.IsNullOrEmpty(stage.GroupKey)
+                        ? new List<string> { stage.Name }
+                        : stage.Tournament.Stages
+                            .Where(s => s.GroupKey == stage.GroupKey)
+                            .OrderBy(s => s.OrderNum).Select(s => s.Name).ToList();
                 return View(vm);
             }
             var (ok, msg) = await _paymentSvc.SubmitAsync(Uid, vm);
             if (!ok) { ModelState.AddModelError("", msg); return View(vm); }
-            TempData["Success"] = msg;
-            return RedirectToAction("Stage", "Prediction", new { vm.StageId });
+            TempData["Info"] = msg;
+            return RedirectToAction("Pay", new { stageId = vm.StageId });
         }
     }
 
@@ -577,13 +610,15 @@ namespace QuinielaApp.Controllers
         private readonly TournamentService _tourSvc;
         private readonly MatchSyncService _syncSvc;
         private readonly PredictionService _predSvc;
+        private readonly PaymentService _paymentSvc;
         private readonly ApiFootballService _api;
         private readonly IWebHostEnvironment _env;
 
         public AdminController(AppDbContext db, TournamentService tourSvc,
-            MatchSyncService syncSvc, PredictionService predSvc, ApiFootballService api,
-            IWebHostEnvironment env)
-        { _db = db; _tourSvc = tourSvc; _syncSvc = syncSvc; _predSvc = predSvc; _api = api; _env = env; }
+            MatchSyncService syncSvc, PredictionService predSvc, PaymentService paymentSvc,
+            ApiFootballService api, IWebHostEnvironment env)
+        { _db = db; _tourSvc = tourSvc; _syncSvc = syncSvc; _predSvc = predSvc;
+          _paymentSvc = paymentSvc; _api = api; _env = env; }
 
         // Dashboard
         public async Task<IActionResult> Index() => View(new AdminDashboardVm
@@ -679,12 +714,32 @@ namespace QuinielaApp.Controllers
         // ── Ver pagos ─────────────────────────────────────
         public async Task<IActionResult> Payments(int? stageId = null)
         {
-            var query = _db.Payments.Include(p => p.User).Include(p => p.Stage)
+            var query = _db.Payments
+                .Include(p => p.User)
+                .Include(p => p.Stage).ThenInclude(s => s.Tournament)
                 .AsQueryable();
             if (stageId.HasValue) query = query.Where(p => p.StageId == stageId);
             var payments = await query.OrderByDescending(p => p.CreatedAt).ToListAsync();
             ViewBag.StageId = stageId;
             return View(payments);
+        }
+
+        // ── Aprobar pago ──────────────────────────────────
+        [HttpPost, ValidateAntiForgeryToken]
+        public async Task<IActionResult> ApprovePayment(int id)
+        {
+            var (ok, msg) = await _paymentSvc.ApproveAsync(id);
+            TempData[ok ? "Success" : "Error"] = msg;
+            return RedirectToAction("Payments");
+        }
+
+        // ── Rechazar pago ─────────────────────────────────
+        [HttpPost, ValidateAntiForgeryToken]
+        public async Task<IActionResult> RejectPayment(int id)
+        {
+            var (ok, msg) = await _paymentSvc.RejectAsync(id);
+            TempData[ok ? "Success" : "Error"] = msg;
+            return RedirectToAction("Payments");
         }
 
         // ── Editar torneo ─────────────────────────────────

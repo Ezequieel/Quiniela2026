@@ -1,6 +1,26 @@
 @model PaymentVm
 @{ ViewData["Title"] = "Inscripción — " + Model.StageName; }
 
+@* ── Pantalla de confirmación post-submit ── *@
+@if (ViewBag.ConfirmMsg != null)
+{
+    <div class="auth-wrap" style="min-height:70vh;align-items:center;justify-content:center">
+        <div class="card" style="max-width:520px;width:100%;text-align:center;padding:2.4rem 2rem">
+            <div style="font-size:3.5rem;margin-bottom:1rem">⏳</div>
+            <h2 style="margin-bottom:.6rem">Comprobante recibido</h2>
+            <p style="color:var(--text3);line-height:1.6;margin-bottom:1.6rem">
+                Tu comprobante de pago fue enviado correctamente y está pendiente de revisión.
+                El administrador lo aprobará en breve y recibirás acceso para hacer tus predicciones.
+            </p>
+            <a asp-controller="Tournament" asp-action="Index" class="btn btn-primary btn-full">
+                Volver a torneos
+            </a>
+        </div>
+    </div>
+}
+else
+{
+
 <div class="page-header">
     <div>
         <a asp-controller="Tournament" asp-action="Index" class="breadcrumb">← Torneos</a>
@@ -61,15 +81,35 @@
                     <span class="text-muted">Aciertas quién gana o si es empate</span>
                 </div>
             </div>
-
         </div>
     </div>
 
     <div class="card">
         <h3 class="card-title">Subir comprobante</h3>
-        <p class="text-muted" style="margin-bottom:1.2rem">
-            Una sola inscripción te da acceso a <strong>todas las fases</strong> del torneo. Sube el comprobante y tu participación se activará de inmediato.
-        </p>
+
+        @* Bloque de fases cubiertas *@
+        @if (Model.RelatedStageNames.Count > 1)
+        {
+            <div style="background:rgba(34,197,94,.08);border:1px solid rgba(34,197,94,.3);
+                        border-radius:8px;padding:.9rem 1rem;margin-bottom:1.2rem">
+                <p style="font-weight:600;font-size:.85rem;margin:0 0 .45rem;color:#16a34a">
+                    ✅ Este pago único te da acceso a @Model.RelatedStageNames.Count fases:
+                </p>
+                <ul style="margin:0;padding-left:1.1rem;font-size:.83rem;color:var(--text2);line-height:1.7">
+                    @foreach (var name in Model.RelatedStageNames)
+                    {
+                        <li>@name</li>
+                    }
+                </ul>
+            </div>
+        }
+        else
+        {
+            <p class="text-muted" style="margin-bottom:1.2rem">
+                Sube tu comprobante para activar tu inscripción en <strong>@Model.StageName</strong>.
+                El administrador revisará el pago y te dará acceso en breve.
+            </p>
+        }
 
         <form asp-action="Pay" method="post" enctype="multipart/form-data">
             @Html.AntiForgeryToken()
@@ -95,11 +135,13 @@
             </div>
 
             <button type="submit" class="btn btn-primary btn-full" style="margin-top:.8rem">
-                Confirmar pago e inscribirme al torneo completo
+                Enviar comprobante
             </button>
         </form>
     </div>
 </div>
+
+}
 
 @section Scripts {
 <script>
@@ -121,14 +163,16 @@ function previewFile(input) {
     }
 }
 const zone = document.getElementById('upload-zone');
-zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('drag-over'); });
-zone.addEventListener('dragleave', () => zone.classList.remove('drag-over'));
-zone.addEventListener('drop', e => {
-    e.preventDefault();
-    zone.classList.remove('drag-over');
-    const input = document.getElementById('voucher-input');
-    input.files = e.dataTransfer.files;
-    previewFile(input);
-});
+if (zone) {
+    zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('drag-over'); });
+    zone.addEventListener('dragleave', () => zone.classList.remove('drag-over'));
+    zone.addEventListener('drop', e => {
+        e.preventDefault();
+        zone.classList.remove('drag-over');
+        const input = document.getElementById('voucher-input');
+        input.files = e.dataTransfer.files;
+        previewFile(input);
+    });
+}
 </script>
 }

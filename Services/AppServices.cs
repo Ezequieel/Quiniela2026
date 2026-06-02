@@ -78,14 +78,14 @@ namespace QuinielaApp.Services
                     .Where(s => s.GroupKey == stage.GroupKey)
                     .ToList();
 
-            // Verificar que no haya pagado ya alguna fase de este grupo
+            // Verificar que no haya un pago activo (aprobado o pendiente) para este grupo
             var stageIdsCubiertos = fasesACubrir.Select(s => s.Id).ToList();
             var yaInscrito = await _db.Payments
                 .AnyAsync(p =>
                     p.UserId == userId &&
                     stageIdsCubiertos.Contains(p.StageId) &&
-                    p.Status == PaymentStatus.Approved);
-            if (yaInscrito) return (false, "Ya estás inscrito en este grupo de fases.");
+                    (p.Status == PaymentStatus.Approved || p.Status == PaymentStatus.Pending));
+            if (yaInscrito) return (false, "Ya tienes un pago registrado para este grupo de fases.");
 
             // Validar archivo
             var ext     = Path.GetExtension(vm.Voucher.FileName).ToLowerInvariant();
@@ -99,7 +99,7 @@ namespace QuinielaApp.Services
             await using (var fs = new FileStream(Path.Combine(folder, fileName), FileMode.Create))
                 await vm.Voucher.CopyToAsync(fs);
 
-            // Registrar el pago
+            // Registrar el pago en estado Pending
             _db.Payments.Add(new Payment
             {
                 UserId      = userId,
@@ -107,34 +107,13 @@ namespace QuinielaApp.Services
                 Amount      = stage.EntryFee,
                 VoucherPath = $"/uploads/payments/{fileName}",
                 Notes       = vm.Notes,
-                Status      = PaymentStatus.Approved,
-                ApprovedAt  = DateTime.UtcNow
+                Status      = PaymentStatus.Pending
             });
-
-            // Entrada al torneo
-            if (!await _db.TournamentEntries.AnyAsync(te =>
-                te.UserId == userId && te.TournamentId == tournamentId))
-                _db.TournamentEntries.Add(new TournamentEntry
-                { UserId = userId, TournamentId = tournamentId });
-
-            // Crear StageEntry para todas las fases cubiertas por este pago
-            foreach (var s in fasesACubrir)
-            {
-                if (!await _db.StageEntries.AnyAsync(se =>
-                    se.UserId == userId && se.StageId == s.Id))
-                    _db.StageEntries.Add(new StageEntry
-                    { UserId = userId, StageId = s.Id, IsActive = true });
-            }
 
             await _db.SaveChangesAsync();
 
-            var msg = fasesACubrir.Count > 1
-                ? $"Inscripción confirmada. Tienes acceso a {fasesACubrir.Count} fases del torneo."
-                : "Inscripción confirmada. Ya puedes hacer tus predicciones.";
-
-            _log.LogInformation("Pago aprobado: usuario {U}, {N} fases cubiertas",
-                userId, fasesACubrir.Count);
-            return (true, msg);
+            _log.LogInformation("Comprobante recibido: usuario {U}, fase {S}", userId, vm.StageId);
+            return (true, "Tu comprobante fue recibido. El administrador lo revisará y te dará acceso en breve.");
         }
 
         /// <summary>
@@ -147,7 +126,6 @@ namespace QuinielaApp.Services
                 .FirstOrDefaultAsync(s => s.Id == stageId);
             if (stage == null) return false;
 
-            // Si tiene GroupKey, verificar si pagó cualquier fase del mismo grupo
             if (!string.IsNullOrEmpty(stage.GroupKey))
             {
                 var groupStageIds = stage.Tournament.Stages
@@ -159,11 +137,86 @@ namespace QuinielaApp.Services
                     p.Status == PaymentStatus.Approved);
             }
 
-            // Sin GroupKey: pago individual por fase
             return await _db.Payments.AnyAsync(p =>
                 p.UserId == userId &&
                 p.StageId == stageId &&
                 p.Status == PaymentStatus.Approved);
+        }
+
+        public async Task<bool> UserHasPendingPaymentAsync(int userId, int stageId)
+        {
+            var stage = await _db.Stages
+                .Include(s => s.Tournament).ThenInclude(t => t.Stages)
+                .FirstOrDefaultAsync(s => s.Id == stageId);
+            if (stage == null) return false;
+
+            if (!string.IsNullOrEmpty(stage.GroupKey))
+            {
+                var groupStageIds = stage.Tournament.Stages
+                    .Where(s => s.GroupKey == stage.GroupKey)
+                    .Select(s => s.Id).ToList();
+                return await _db.Payments.AnyAsync(p =>
+                    p.UserId == userId &&
+                    groupStageIds.Contains(p.StageId) &&
+                    p.Status == PaymentStatus.Pending);
+            }
+
+            return await _db.Payments.AnyAsync(p =>
+                p.UserId == userId &&
+                p.StageId == stageId &&
+                p.Status == PaymentStatus.Pending);
+        }
+
+        public async Task<(bool ok, string msg)> ApproveAsync(int paymentId)
+        {
+            var payment = await _db.Payments
+                .Include(p => p.Stage)
+                    .ThenInclude(s => s.Tournament)
+                        .ThenInclude(t => t.Stages)
+                .FirstOrDefaultAsync(p => p.Id == paymentId);
+            if (payment == null) return (false, "Pago no encontrado.");
+            if (payment.Status == PaymentStatus.Approved) return (false, "Este pago ya fue aprobado.");
+
+            var stage        = payment.Stage;
+            var userId       = payment.UserId;
+            var tournamentId = stage.TournamentId;
+
+            var fasesACubrir = string.IsNullOrEmpty(stage.GroupKey)
+                ? new List<Stage> { stage }
+                : stage.Tournament.Stages
+                    .Where(s => s.GroupKey == stage.GroupKey)
+                    .ToList();
+
+            if (!await _db.TournamentEntries.AnyAsync(te =>
+                te.UserId == userId && te.TournamentId == tournamentId))
+                _db.TournamentEntries.Add(new TournamentEntry
+                { UserId = userId, TournamentId = tournamentId });
+
+            foreach (var s in fasesACubrir)
+            {
+                if (!await _db.StageEntries.AnyAsync(se =>
+                    se.UserId == userId && se.StageId == s.Id))
+                    _db.StageEntries.Add(new StageEntry
+                    { UserId = userId, StageId = s.Id, IsActive = true });
+            }
+
+            payment.Status     = PaymentStatus.Approved;
+            payment.ApprovedAt = DateTime.UtcNow;
+
+            await _db.SaveChangesAsync();
+            _log.LogInformation("Pago {P} aprobado: usuario {U}, {N} fases", paymentId, userId, fasesACubrir.Count);
+            return (true, $"Pago aprobado. Usuario inscrito en {fasesACubrir.Count} fase(s).");
+        }
+
+        public async Task<(bool ok, string msg)> RejectAsync(int paymentId)
+        {
+            var payment = await _db.Payments.FindAsync(paymentId);
+            if (payment == null) return (false, "Pago no encontrado.");
+
+            _db.Payments.Remove(payment);
+            await _db.SaveChangesAsync();
+            _log.LogInformation("Pago {P} rechazado y eliminado", paymentId);
+            return (true, "Comprobante rechazado. El usuario puede volver a intentarlo.");
         }
     }
 

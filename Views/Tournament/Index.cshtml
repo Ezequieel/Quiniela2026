@@ -162,14 +162,7 @@
                 }
 
                 <div class="stage-actions">
-                    @if (!s.IsPaid && s.Status != "Finished")
-                    {
-                        <a asp-controller="Payment" asp-action="Pay" asp-route-stageId="@s.Id"
-                           class="btn @(isMundial ? "btn-wc" : "btn-primary") btn-sm">
-                            Pagar $@s.EntryFee e inscribirme
-                        </a>
-                    }
-                    else if (s.IsPaid)
+                    @if (s.IsPaid)
                     {
                         <a asp-controller="Prediction" asp-action="Stage" asp-route-stageId="@s.Id"
                            class="btn @(isMundial ? (s.CanPredict ? "btn-wc" : "btn-wc-outline") : (s.CanPredict ? "btn-primary" : "btn-secondary")) btn-sm">
@@ -178,6 +171,21 @@
                         <a asp-controller="Leaderboard" asp-action="Index"
                            asp-route-tournamentId="@t.Id" asp-route-stageId="@s.Id"
                            class="btn @(isMundial ? "btn-wc-outline" : "btn-outline") btn-sm">Clasificación</a>
+                    }
+                    else if (s.HasPendingPayment)
+                    {
+                        <div style="background:rgba(251,191,36,.12);border:1px solid rgba(251,191,36,.5);
+                                    border-radius:8px;padding:.55rem .8rem;font-size:.82rem;line-height:1.4">
+                            <span style="font-weight:600;color:#b45309">⏳ Pago en revisión</span><br>
+                            <span style="color:var(--text3);font-size:.78rem">El administrador verificará tu comprobante</span>
+                        </div>
+                    }
+                    else if (s.Status != "Finished")
+                    {
+                        <a asp-controller="Payment" asp-action="Pay" asp-route-stageId="@s.Id"
+                           class="btn @(isMundial ? "btn-wc" : "btn-primary") btn-sm">
+                            Pagar $@s.EntryFee e inscribirme
+                        </a>
                     }
                 </div>
             </div>
