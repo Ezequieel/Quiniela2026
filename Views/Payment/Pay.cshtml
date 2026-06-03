@@ -46,7 +46,7 @@ else
             <div class="qr-wrap">
                 @if (!string.IsNullOrEmpty(Model.PaymentQrPath))
                 {
-                    <p class="qr-label">Escanea el código QR para realizar el pago</p>
+                    <p class="qr-label">Banco asignado:</p>
                     <img src="@Model.PaymentQrPath" alt="QR de pago" class="qr-img" />
                 }
                 @if (!string.IsNullOrEmpty(Model.PaymentUrl))

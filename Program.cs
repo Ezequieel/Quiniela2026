@@ -66,7 +66,7 @@ using (var scope = app.Services.CreateScope())
 }
 
 if (!app.Environment.IsDevelopment())
-    app.UseExceptionHandler("/Home/Error");
+    app.UseExceptionHandler("/Account/Login");
 
 app.UseStaticFiles();
 app.UseRouting();
@@ -75,6 +75,6 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllerRoute("admin", "Admin/{action=Index}/{id?}", new { controller = "Admin" });
-app.MapControllerRoute("default", "{controller=Tournament}/{action=Index}/{id?}");
+app.MapControllerRoute("default", "{controller=Home}/{action=Index}/{id?}");
 
 app.Run();

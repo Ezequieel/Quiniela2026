@@ -8,10 +8,12 @@
     </div>
 </div>
 
-<div class="card" style="max-width:620px">
-    <form asp-action="CreateTournament" method="post" enctype="multipart/form-data">
+<div class="card" style="max-width:640px">
+    <form asp-action="CreateTournament" method="post" enctype="multipart/form-data" id="create-form">
         @Html.AntiForgeryToken()
         <div asp-validation-summary="All" class="val-summary"></div>
+
+        <div class="section-title">Información del torneo</div>
 
         <div class="field">
             <label asp-for="Name">Nombre del torneo</label>
@@ -20,37 +22,49 @@
         </div>
         <div class="field">
             <label asp-for="Description">Descripción <span class="hint">Opcional</span></label>
-            <input asp-for="Description" class="input" placeholder="Descripción breve" />
+            <input asp-for="Description" class="input" placeholder="Descripción breve del torneo" />
         </div>
 
         <div class="fields-row">
             <div class="field">
                 <label asp-for="ApiLeagueId">ID de liga en API-Football</label>
                 <input asp-for="ApiLeagueId" class="input" />
-                <span class="hint">La Liga = 140 · Premier = 39 · Copa Presidente SV = 1219</span>
+                <span class="field-hint">La Liga = 140 · Premier = 39 · Champions = 2 · Copa SV = 1219</span>
                 <span asp-validation-for="ApiLeagueId" class="field-err"></span>
             </div>
             <div class="field">
                 <label asp-for="ApiSeason">Temporada</label>
                 <input asp-for="ApiSeason" class="input" />
-                <span class="hint">Año de inicio: 2025, 2026...</span>
+                <span class="field-hint">Año de inicio: 2025, 2026...</span>
             </div>
         </div>
 
         <div class="field">
-            <label asp-for="LogoFile">Logo <span class="hint">Opcional — imagen del torneo</span></label>
-            <input asp-for="LogoFile" type="file" accept="image/*" class="input-file" />
+            <label>Logo del torneo <span class="hint">Opcional — JPG, PNG o GIF</span></label>
+            <input asp-for="LogoFile" type="file" accept="image/*" class="input-file"
+                   id="logo-file" onchange="validateFile(this, 2, 'logo-err', 'logo-hint')" />
+            <span class="field-hint" id="logo-hint">Tamaño máximo permitido: 2 MB</span>
+            <span class="field-err" id="logo-err"></span>
         </div>
 
         <div class="divider"></div>
-        <p style="font-weight:700;font-size:.9rem;margin-bottom:1rem">Configuración de pago</p>
+        <div class="section-title">Configuración de pago</div>
 
         <div class="field">
-            <label asp-for="QrFile">Imagen del código QR de pago</label>
-            <input asp-for="QrFile" type="file" accept="image/*" class="input-file" required />
-            <span class="hint">Imagen QR del banco para que los participantes realicen el pago</span>
+            <label asp-for="QrFile">Imagen del código QR de pago <span class="hint">JPG o PNG</span></label>
+            <input asp-for="QrFile" type="file" accept="image/*" class="input-file"
+                   id="qr-file" onchange="validateFile(this, 3, 'qr-err', 'qr-hint')" />
+            <span class="field-hint" id="qr-hint">Tamaño máximo permitido: 3 MB</span>
+            <span class="field-err" id="qr-err"></span>
             <span asp-validation-for="QrFile" class="field-err"></span>
         </div>
+
+        <div class="field">
+            <label asp-for="PaymentUrl">URL alternativa de pago <span class="hint">Opcional</span></label>
+            <input asp-for="PaymentUrl" class="input" placeholder="https://link.pagadito.com/..." />
+            <span class="field-hint">Enlace directo si el usuario no puede escanear el QR</span>
+        </div>
+
         <div class="field">
             <label asp-for="PaymentInfo">Instrucciones de pago</label>
             <textarea asp-for="PaymentInfo" class="input" rows="4"
@@ -58,6 +72,39 @@
             <span asp-validation-for="PaymentInfo" class="field-err"></span>
         </div>
 
-        <button type="submit" class="btn btn-primary">Crear torneo</button>
+        <button type="submit" class="btn btn-primary btn-lg">Crear torneo</button>
     </form>
 </div>
+
+@section Scripts {
+<script>
+const MAX_SIZES = { 'logo-file': 2, 'qr-file': 3 };
+
+function validateFile(input, maxMB, errId, hintId) {
+    const errEl  = document.getElementById(errId);
+    const hintEl = document.getElementById(hintId);
+    errEl.textContent = '';
+
+    if (!input.files || input.files.length === 0) return true;
+
+    const file    = input.files[0];
+    const maxBytes = maxMB * 1024 * 1024;
+
+    if (file.size > maxBytes) {
+        errEl.textContent = `El archivo seleccionado supera el tamaño máximo permitido de ${maxMB} MB.`;
+        input.value = '';
+        return false;
+    }
+    hintEl.textContent = `✓ ${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB)`;
+    hintEl.style.color = 'var(--green)';
+    return true;
+}
+
+document.getElementById('create-form').addEventListener('submit', function(e) {
+    let valid = true;
+    if (!validateFile(document.getElementById('logo-file'), 2, 'logo-err', 'logo-hint')) valid = false;
+    if (!validateFile(document.getElementById('qr-file'),   3, 'qr-err',   'qr-hint'))  valid = false;
+    if (!valid) e.preventDefault();
+});
+</script>
+}

@@ -24,19 +24,31 @@ jobs:
           --self-contained true \
           -o ./publish
 
+      - name: Stop service
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_KEY }}
+          script: sudo systemctl stop quiniela
+
       - name: Deploy to EC2
         uses: appleboy/scp-action@master
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_KEY }}
-          source: "./publish/*"
-          target: ${{ secrets.EC2_PATH }}/publish
+          source: "./publish/"
+          target: "${{ secrets.EC2_PATH }}/publish"
+          rm: true
 
-      - name: Restart service
+      - name: Start service
         uses: appleboy/ssh-action@master
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_KEY }}
-          script: sudo systemctl restart quiniela
+          script: |
+            sudo systemctl start quiniela
+            sleep 3
+            sudo systemctl status quiniela
