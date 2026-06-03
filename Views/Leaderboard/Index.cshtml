@@ -42,6 +42,12 @@ else
         <div class="lb-subtitle">
             Resultados — @Model.StageName
         </div>
+        @if (Model.IsPartial)
+        {
+            <div class="lb-partial-notice">
+                Puntos parciales — se actualizan conforme terminan los partidos
+            </div>
+        }
     }
 
     @if (!Model.Rows.Any())

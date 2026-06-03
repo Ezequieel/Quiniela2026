@@ -7,10 +7,12 @@ namespace QuinielaApp.Helpers
     /// </summary>
     public static class TimeHelper
     {
-        private static readonly TimeZoneInfo SvTz =
-            TimeZoneInfo.FindSystemTimeZoneById("Central America Standard Time");
-        // En Linux usar: "America/El_Salvador"
-        // En Windows usar: "Central America Standard Time"
+        private static readonly TimeZoneInfo SvTz = GetSvZone();
+        private static TimeZoneInfo GetSvZone()
+        {
+            try   { return TimeZoneInfo.FindSystemTimeZoneById("Central America Standard Time"); }
+            catch { return TimeZoneInfo.FindSystemTimeZoneById("America/El_Salvador"); }
+        }
 
         /// <summary>Convierte UTC a hora de El Salvador para mostrar en pantalla.</summary>
         public static DateTime ToSvTime(DateTime utc) =>

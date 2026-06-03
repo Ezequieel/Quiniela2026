@@ -1,28 +1,59 @@
 @model LoginVm
 @{ ViewData["Title"] = "Iniciar sesión"; Layout = "~/Views/Shared/_Layout.cshtml"; }
 
-<div class="auth-wrap auth-bg">
-  <div class="auth-card">
-    <div class="auth-logo">⚽</div>
-    <h1 class="auth-title">Quiniela Mundial</h1>
-    <p class="auth-sub">Ingresa tus credenciales para continuar</p>
-    <form asp-action="Login" method="post">
-      @Html.AntiForgeryToken()
-      <div asp-validation-summary="All" class="val-summary"></div>
-      <div class="field">
-        <label asp-for="Email">Correo electrónico</label>
-        <input asp-for="Email" class="input" placeholder="correo@empresa.com" autocomplete="email" />
-        <span asp-validation-for="Email" class="field-err"></span>
+<div class="auth-wrap">
+  <!-- Panel izquierdo -->
+  <div class="auth-left">
+    <div class="auth-left-bg">2026</div>
+    <div class="auth-left-content">
+      <div class="auth-left-kicker">
+        <div class="auth-left-kicker-line"></div>
+        FIFA World Cup 2026
       </div>
-      <div class="field">
-        <label asp-for="Password">Contraseña</label>
-        <input asp-for="Password" class="input" type="password" placeholder="••••••••" autocomplete="current-password" />
-        <span asp-validation-for="Password" class="field-err"></span>
+      <div class="auth-left-title">
+        Quiniela<span>Mundial</span>
       </div>
-      <button type="submit" class="btn btn-primary btn-full btn-lg" style="margin-top:.4rem">
-        Iniciar sesión
-      </button>
-    </form>
-    <p class="auth-link">¿No tienes cuenta? <a asp-action="Register">Regístrate aquí</a></p>
+      <p class="auth-left-sub">USA · Canada · Mexico — 11 Jun · 19 Jul</p>
+      <div class="auth-left-features">
+        <div class="auth-feature">Predice resultados en tiempo real</div>
+        <div class="auth-feature">Compite con toda la operacion</div>
+        <div class="auth-feature">Sigue la clasificacion en vivo</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Panel derecho -->
+  <div class="auth-right">
+    <div class="auth-form-wrap">
+      <div class="auth-form-title">Iniciar sesion</div>
+      <p class="auth-form-sub">Ingresa tus credenciales</p>
+
+      <form asp-action="Login" method="post">
+        @Html.AntiForgeryToken()
+        <div asp-validation-summary="All" class="val-summary"></div>
+
+        <div class="field">
+          <label asp-for="Email">Correo electronico</label>
+          <input asp-for="Email" class="input"
+                 placeholder="correo@empresa.com" autocomplete="email" />
+          <span asp-validation-for="Email" class="field-err"></span>
+        </div>
+        <div class="field">
+          <label asp-for="Password">Contrasena</label>
+          <input asp-for="Password" class="input" type="password"
+                 placeholder="••••••••" autocomplete="current-password" />
+          <span asp-validation-for="Password" class="field-err"></span>
+        </div>
+
+        <button type="submit" class="btn btn-primary btn-full btn-lg"
+                style="margin-top:.6rem">
+          Iniciar sesion
+        </button>
+      </form>
+
+      <p class="auth-link">
+        Sin cuenta — <a asp-action="Register">Registrarse</a>
+      </p>
+    </div>
   </div>
 </div>

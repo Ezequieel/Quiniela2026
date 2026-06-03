@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using QuinielaApp.Data;
+using QuinielaApp.Helpers;
 using QuinielaApp.Models;
 
 namespace QuinielaApp.Services
@@ -31,8 +32,10 @@ namespace QuinielaApp.Services
             var match = await _db.Matches.Include(m => m.Stage)
                 .FirstOrDefaultAsync(m => m.Id == matchId);
             if (match == null) return (false, "Partido no encontrado.");
-            if (match.Stage.PredictionDeadline < DateTime.UtcNow)
-                return (false, "El plazo para predecir ya cerró.");
+            // MatchDate viene de la API en hora local SV, no en UTC real
+            var matchDeadlineUtc = TimeHelper.ToUtc(match.MatchDate).AddMinutes(-15);
+            if (DateTime.UtcNow >= matchDeadlineUtc)
+                return (false, "Las predicciones para este partido cerraron.");
             if (match.Status == "FT")
                 return (false, "Este partido ya finalizó.");
             if (!Enum.TryParse<MatchResult>(resultPred, out var result))
@@ -82,6 +85,95 @@ namespace QuinielaApp.Services
             }
             await _db.SaveChangesAsync();
             return (true, "Predicción guardada.");
+        }
+
+        // ── Calcular puntos parciales (partidos FT individualmente) ──────────
+        public async Task CalculatePartialPointsAsync(int stageId, List<Match> finishedMatches)
+        {
+            var stage = await _db.Stages.FindAsync(stageId);
+            if (stage == null) return;
+            var tournamentId = stage.TournamentId;
+
+            var participants = await _db.TournamentEntries
+                .Where(te => te.TournamentId == tournamentId)
+                .Select(te => te.UserId)
+                .ToListAsync();
+
+            var allStageIds = await _db.Stages
+                .Where(s => s.TournamentId == tournamentId)
+                .Select(s => s.Id)
+                .ToListAsync();
+
+            foreach (var uid in participants)
+            {
+                int totalPts = 0, resultHits = 0, scoreHits = 0;
+
+                foreach (var match in finishedMatches)
+                {
+                    var actual = ApiFootballService.GetResult(match.HomeScore, match.AwayScore);
+                    if (actual == null) continue;
+                    var pred = await _db.Predictions
+                        .FirstOrDefaultAsync(p => p.UserId == uid && p.MatchId == match.Id);
+                    if (pred == null) continue;
+
+                    bool resultOk = pred.ResultPrediction == actual;
+                    bool scoreOk  = pred.HomeScorePred == match.HomeScore &&
+                                    pred.AwayScorePred == match.AwayScore;
+                    pred.ResultCorrect = resultOk;
+                    pred.ScoreCorrect  = scoreOk;
+
+                    int pts;
+                    if (scoreOk)       { pts = PTS_EXACT;  scoreHits++;  resultHits++; }
+                    else if (resultOk) { pts = PTS_RESULT; resultHits++; }
+                    else               { pts = PTS_NOTHING; }
+                    pred.PointsEarned = pts;
+                    totalPts += pts;
+                }
+
+                // Actualizar / crear StageResult con puntos parciales
+                var sr = await _db.StageResults
+                    .FirstOrDefaultAsync(r => r.StageId == stageId && r.UserId == uid);
+                if (sr == null)
+                    _db.StageResults.Add(new StageResult
+                    {
+                        StageId    = stageId, UserId = uid,
+                        Points     = totalPts,
+                        ResultHits = resultHits, ScoreHits = scoreHits
+                    });
+                else
+                { sr.Points = totalPts; sr.ResultHits = resultHits; sr.ScoreHits = scoreHits; }
+
+                // Actualizar / crear StageEntry con puntos parciales
+                var se = await _db.StageEntries
+                    .FirstOrDefaultAsync(e => e.UserId == uid && e.StageId == stageId);
+                if (se == null)
+                    _db.StageEntries.Add(new StageEntry
+                    { UserId = uid, StageId = stageId, IsActive = true, Points = totalPts });
+                else
+                    se.Points = totalPts;
+
+                // Recalcular total del torneo sumando todos los StageResults del usuario
+                var te = await _db.TournamentEntries
+                    .FirstOrDefaultAsync(e => e.UserId == uid && e.TournamentId == tournamentId);
+                if (te != null)
+                {
+                    var allPts = await _db.StageResults
+                        .Where(r => r.UserId == uid && allStageIds.Contains(r.StageId))
+                        .SumAsync(r => (int?)r.Points) ?? 0;
+                    te.TotalPoints = allPts;
+                }
+            }
+
+            // Rankings parciales
+            var results = await _db.StageResults
+                .Where(r => r.StageId == stageId)
+                .OrderByDescending(r => r.Points)
+                .ToListAsync();
+            for (int i = 0; i < results.Count; i++) results[i].Rank = i + 1;
+
+            await _db.SaveChangesAsync();
+            _log.LogInformation("Puntos parciales — fase {S}, {N} partidos FT",
+                stageId, finishedMatches.Count);
         }
 
         // ── Calcular puntos ───────────────────────────────

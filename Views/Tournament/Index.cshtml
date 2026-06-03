@@ -49,13 +49,40 @@
     </div>
 }
 
-@* ── Saludo ── *@
-<div class="page-header">
-    <div>
-        <h1 style="@(hasMundial ? "color:#fff" : "")">Bienvenido, @Model.UserName</h1>
-        <p class="text-muted">Selecciona un torneo para participar o ver tus predicciones.</p>
+@* ── Hero de bienvenida ── *@
+<div class="tour-welcome-hero">
+    <div class="tw-orb tw-orb-red"></div>
+    <div class="tw-orb tw-orb-blue"></div>
+    <div class="tw-orb tw-orb-green"></div>
+    <div class="tour-welcome-content">
+        <div class="tour-welcome-tag">
+            <span class="tour-welcome-tag-dot"></span>
+            FIFA WORLD CUP 2026
+        </div>
+        <div class="tour-welcome-label">Bienvenido de vuelta,</div>
+        <h1 class="tour-welcome-title">
+            <span class="tour-welcome-name">@ViewBag.UserName</span>
+        </h1>
+        <p class="tour-welcome-sub">Selecciona un torneo para ver tus predicciones</p>
+        <div class="tour-welcome-stats">
+            <div class="tour-welcome-stat">
+                <span class="tour-welcome-stat-num" style="color:#FB7185">@ViewBag.TotalPoints</span>
+                <span class="tour-welcome-stat-lbl">Mis puntos</span>
+            </div>
+            <div class="tour-stat-sep"></div>
+            <div class="tour-welcome-stat">
+                <span class="tour-welcome-stat-num" style="color:#C9A84C">@ViewBag.BestRank</span>
+                <span class="tour-welcome-stat-lbl">Mejor posicion</span>
+            </div>
+            <div class="tour-stat-sep"></div>
+            <div class="tour-welcome-stat">
+                <span class="tour-welcome-stat-num" style="color:#4ADE80">@ViewBag.ActiveTournaments</span>
+                <span class="tour-welcome-stat-lbl">Torneos</span>
+            </div>
+        </div>
     </div>
 </div>
+
 
 @if (!Model.Tournaments.Any())
 {
@@ -108,7 +135,7 @@
         <div class="stages-grid">
         @foreach (var s in t.Stages)
         {
-            <div class="stage-card @(s.IsPaid ? "stage-paid" : "")">
+            <div class="stage-card @(s.IsPaid ? "stage-paid" : "") stage-@s.Status.ToLower()">
                 <div class="stage-card-top">
                     <div>
                         <div class="stage-name">@s.Name</div>
@@ -129,6 +156,13 @@
                     </span>
                 </div>
 
+                @if (!string.IsNullOrEmpty(s.BannerImagePath))
+                {
+                    <div class="stage-banner">
+                        <img src="@s.BannerImagePath" alt="@s.Name" class="stage-banner-img" />
+                    </div>
+                }
+
                 <div class="stage-stats">
                     <div class="stage-stat">
                         <span class="stat-val">$@s.EntryFee</span>
@@ -138,7 +172,7 @@
                         <span class="stat-val">@s.TotalMatches</span>
                         <span class="stat-lbl">Partidos</span>
                     </div>
-                    @if (s.IsPaid)
+                    @if (s.IsPaid || s.HasGroupApprovedPayment)
                     {
                         <div class="stage-stat">
                             <span class="stat-val">@s.MyPoints</span>
@@ -154,15 +188,25 @@
                     }
                 </div>
 
-                @if (s.CanPredict)
+                @if (s.OpenMatchesCount > 0)
                 {
-                    <div class="stage-deadline">
-                        Predicciones cierran: @TimeHelper.Format(s.Deadline, "dd MMM, HH:mm")
+                    <div class="stage-open-info">
+                        <span class="stage-open-count">@s.OpenMatchesCount abiertos</span>
+                        @if (s.ClosedMatchesCount > 0)
+                        {
+                            <span class="stage-closed-count"> · @s.ClosedMatchesCount cerrados</span>
+                        }
+                    </div>
+                }
+                else if (s.Status != "Finished" && s.TotalMatches > 0)
+                {
+                    <div class="stage-open-info">
+                        <span class="stage-closed-count">Todos cerrados</span>
                     </div>
                 }
 
                 <div class="stage-actions">
-                    @if (s.IsPaid)
+                    @if (s.IsPaid || s.HasGroupApprovedPayment)
                     {
                         <a asp-controller="Prediction" asp-action="Stage" asp-route-stageId="@s.Id"
                            class="btn @(isMundial ? (s.CanPredict ? "btn-wc" : "btn-wc-outline") : (s.CanPredict ? "btn-primary" : "btn-secondary")) btn-sm">
@@ -172,20 +216,26 @@
                            asp-route-tournamentId="@t.Id" asp-route-stageId="@s.Id"
                            class="btn @(isMundial ? "btn-wc-outline" : "btn-outline") btn-sm">Clasificación</a>
                     }
-                    else if (s.HasPendingPayment)
+                    else if (s.HasGroupPendingPayment)
                     {
-                        <div style="background:rgba(251,191,36,.12);border:1px solid rgba(251,191,36,.5);
-                                    border-radius:8px;padding:.55rem .8rem;font-size:.82rem;line-height:1.4">
-                            <span style="font-weight:600;color:#b45309">⏳ Pago en revisión</span><br>
-                            <span style="color:var(--text3);font-size:.78rem">El administrador verificará tu comprobante</span>
+                        <div class="stage-pending-notice">
+                            <span><span class="stage-pending-icon">&#9203;</span> Pago en revisión</span>
+                            <span class="stage-pending-sub">El administrador verificará tu comprobante</span>
                         </div>
                     }
-                    else if (s.Status != "Finished")
+                    else if (s.IsGroupPaymentLeader || string.IsNullOrEmpty(s.GroupKey))
                     {
-                        <a asp-controller="Payment" asp-action="Pay" asp-route-stageId="@s.Id"
-                           class="btn @(isMundial ? "btn-wc" : "btn-primary") btn-sm">
-                            Pagar $@s.EntryFee e inscribirme
-                        </a>
+                        @if (s.Status != "Finished")
+                        {
+                            <a asp-controller="Payment" asp-action="Pay" asp-route-stageId="@s.Id"
+                               class="btn @(isMundial ? "btn-wc" : "btn-primary") btn-sm">
+                                Pagar $@s.EntryFee.ToString("N2") e inscribirme
+                            </a>
+                        }
+                    }
+                    else
+                    {
+                        <span class="chip chip-gray" style="font-size:.72rem">Incluida en el pago del grupo</span>
                     }
                 </div>
             </div>

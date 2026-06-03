@@ -112,7 +112,6 @@ namespace QuinielaApp.Controllers
                     ApiLeagueId   = t.ApiLeagueId
                 };
 
-                // Verificar si el usuario pagó el torneo (cualquier fase del torneo)
                 var paidTournament = await _db.Payments
                     .Include(p => p.Stage)
                     .AnyAsync(p =>
@@ -120,37 +119,97 @@ namespace QuinielaApp.Controllers
                         p.Stage.TournamentId == t.Id &&
                         p.Status == PaymentStatus.Approved);
 
+                // Determinar líder de cada grupo de pago
+                var groupLeaders = new HashSet<int>();
+                foreach (var g in t.Stages
+                    .Where(s => !string.IsNullOrEmpty(s.GroupKey))
+                    .GroupBy(s => s.GroupKey))
+                {
+                    groupLeaders.Add(g.OrderBy(s => s.OrderNum).First().Id);
+                }
+                foreach (var s in t.Stages.Where(s => string.IsNullOrEmpty(s.GroupKey)))
+                    groupLeaders.Add(s.Id);
+
+                // Estado de pago por GroupKey
+                var groupApprovedKeys = new HashSet<string>();
+                var groupPendingKeys  = new HashSet<string>();
+                foreach (var grp in t.Stages
+                    .Where(s => !string.IsNullOrEmpty(s.GroupKey))
+                    .GroupBy(s => s.GroupKey!))
+                {
+                    var ids = grp.Select(s => s.Id).ToList();
+                    var hasApproved = await _db.Payments.AnyAsync(p =>
+                        p.UserId == uid && ids.Contains(p.StageId) && p.Status == PaymentStatus.Approved);
+                    if (hasApproved)
+                        groupApprovedKeys.Add(grp.Key);
+                    else if (await _db.Payments.AnyAsync(p =>
+                        p.UserId == uid && ids.Contains(p.StageId) && p.Status == PaymentStatus.Pending))
+                        groupPendingKeys.Add(grp.Key);
+                }
+
                 foreach (var s in t.Stages.OrderBy(s => s.OrderNum))
                 {
-                    var paid = paidTournament;
-                    var se   = await _db.StageEntries
-                        .FirstOrDefaultAsync(e => e.UserId == uid && e.StageId == s.Id);
-                    var rank = se != null ? await _db.StageEntries
-                        .CountAsync(e => e.StageId == s.Id && e.Points > se.Points) + 1 : 0;
+                    var paid  = paidTournament;
+                    var sr    = await _db.StageResults
+                        .FirstOrDefaultAsync(r => r.UserId == uid && r.StageId == s.Id);
                     var total = await _db.StageEntries.CountAsync(e => e.StageId == s.Id);
-                    var matchCount = await _db.Matches.CountAsync(m => m.StageId == s.Id);
-
+                    var stageMatches = await _db.Matches
+                        .Where(m => m.StageId == s.Id)
+                        .Select(m => new { m.MatchDate, m.Status })
+                        .ToListAsync();
+                    var matchCount     = stageMatches.Count;
+                    var nowStage       = DateTime.UtcNow;
+                    // MatchDate de la API está en hora SV local — convertir a UTC real antes de comparar
+                    var openMatches    = stageMatches.Count(m => m.Status == "NS" && nowStage < TimeHelper.ToUtc(m.MatchDate).AddMinutes(-15));
+                    var closedMatches  = stageMatches.Count(m => m.Status == "NS" && nowStage >= TimeHelper.ToUtc(m.MatchDate).AddMinutes(-15));
                     var hasPending = !paid && await _paymentSvc.UserHasPendingPaymentAsync(uid, s.Id);
+
+                    var hasGroupApproved = !string.IsNullOrEmpty(s.GroupKey) && groupApprovedKeys.Contains(s.GroupKey!);
+                    var hasGroupPending  = !string.IsNullOrEmpty(s.GroupKey)
+                        ? groupPendingKeys.Contains(s.GroupKey!)
+                        : hasPending;
+
                     card.Stages.Add(new StageCardVm
                     {
-                        Id                = s.Id,
-                        Name              = s.Name,
-                        Type              = s.Type.ToString(),
-                        Status            = s.Status.ToString(),
-                        EntryFee          = s.EntryFee,
-                        Deadline          = s.PredictionDeadline,
-                        TotalMatches      = matchCount,
-                        IsPaid            = paid,
-                        HasPendingPayment = hasPending,
-                        CanPredict        = paid && s.Status != StageStatus.Finished
-                                         && s.PredictionDeadline > DateTime.UtcNow,
-                        MyPoints          = se?.Points ?? 0,
-                        MyRank            = rank,
-                        TotalParticipants = total
+                        Id                      = s.Id,
+                        Name                    = s.Name,
+                        Type                    = s.Type.ToString(),
+                        Status                  = s.Status.ToString(),
+                        EntryFee                = s.EntryFee,
+                        Deadline                = s.PredictionDeadline,
+                        TotalMatches            = matchCount,
+                        OpenMatchesCount        = openMatches,
+                        ClosedMatchesCount      = closedMatches,
+                        IsPaid                  = paid,
+                        HasPendingPayment       = hasPending,
+                        IsGroupPaymentLeader    = groupLeaders.Contains(s.Id),
+                        HasGroupApprovedPayment = hasGroupApproved,
+                        HasGroupPendingPayment  = hasGroupPending,
+                        GroupKey                = s.GroupKey,
+                        BannerImagePath         = s.BannerImagePath,
+                        CanPredict              = (paid || hasGroupApproved) && s.Status != StageStatus.Finished
+                                                && openMatches > 0,
+                        MyPoints                = sr?.Points ?? 0,
+                        MyRank                  = sr?.Rank ?? 0,
+                        TotalParticipants       = total
                     });
                 }
                 vm.Tournaments.Add(card);
             }
+
+            var totalPts = await _db.TournamentEntries
+                .Where(e => e.UserId == uid)
+                .SumAsync(e => (int?)e.TotalPoints) ?? 0;
+            var bestRankRaw = await _db.StageResults
+                .Where(r => r.UserId == uid)
+                .MinAsync(r => (int?)r.Rank);
+
+            ViewBag.UserName          = vm.UserName ?? "Participante";
+            ViewBag.TotalPoints       = totalPts;
+            ViewBag.BestRank          = bestRankRaw.HasValue ? $"#{bestRankRaw}" : "—";
+            ViewBag.ActiveTournaments = await _db.TournamentEntries
+                .CountAsync(e => e.UserId == uid);
+
             return View(vm);
         }
     }
@@ -268,14 +327,24 @@ namespace QuinielaApp.Controllers
                 .OrderBy(m => m.MatchDate)
                 .ToListAsync();
 
+            var now   = DateTime.UtcNow;
             var cards = matches.Select(m => {
-                var pred = m.Predictions.FirstOrDefault();
+                var pred        = m.Predictions.FirstOrDefault();
+                // MatchDate viene de la API en hora SV local (no es UTC real)
+                // Para comparar con DateTime.UtcNow hay que convertirlo primero
+                var matchDl     = m.MatchDate.AddMinutes(-15);          // deadline en hora SV local
+                var matchDlUtc  = TimeHelper.ToUtc(matchDl);            // deadline en UTC real
+                var canPredThis = now < matchDlUtc;
                 return new MatchPredVm
                 {
-                    Id = m.Id, ApiMatchId = m.ApiMatchId,
-                    HomeTeam = m.HomeTeam, AwayTeam = m.AwayTeam,
-                    HomeTeamLogo = m.HomeTeamLogo, AwayTeamLogo = m.AwayTeamLogo,
-                    MatchDate = m.MatchDate, HomeScore = m.HomeScore, AwayScore = m.AwayScore,
+                    Id            = m.Id, ApiMatchId = m.ApiMatchId,
+                    HomeTeam      = m.HomeTeam, AwayTeam = m.AwayTeam,
+                    HomeTeamLogo  = m.HomeTeamLogo, AwayTeamLogo = m.AwayTeamLogo,
+                    MatchDate     = m.MatchDate,
+                    MatchDeadline = matchDl,       // SV local — para mostrar la hora de cierre
+                    MatchDateSv   = m.MatchDate,   // ya está en hora SV, sin conversión adicional
+                    CanPredict    = canPredThis,
+                    HomeScore = m.HomeScore, AwayScore = m.AwayScore,
                     Status = m.Status, Elapsed = m.Elapsed,
                     UserResult    = pred?.ResultPrediction.ToString(),
                     UserHomeScore = pred?.HomeScorePred,
@@ -291,7 +360,7 @@ namespace QuinielaApp.Controllers
                         AwayTeam        = m.AwayTeam,
                         HomeTeamLogo    = m.HomeTeamLogo,
                         AwayTeamLogo    = m.AwayTeamLogo,
-                        CanPredict      = stage.PredictionDeadline > DateTime.UtcNow,
+                        CanPredict      = canPredThis,
                         HtHomePred      = pred.HtHomePred,
                         HtAwayPred      = pred.HtAwayPred,
                         YellowCardsPred = pred.YellowCardsPred,
@@ -327,7 +396,7 @@ namespace QuinielaApp.Controllers
                 TournamentName = stage.Tournament.Name,
                 Deadline       = stage.PredictionDeadline,
                 CanPredict     = stage.Status != StageStatus.Finished
-                               && stage.PredictionDeadline > DateTime.UtcNow,
+                               && cards.Any(c => c.CanPredict),
                 IsPaid         = paid,
                 Matches        = cards
             });
@@ -348,8 +417,8 @@ namespace QuinielaApp.Controllers
             var match = await _db.Matches.Include(m => m.Stage)
                 .FirstOrDefaultAsync(m => m.Id == dto.MatchId);
             if (match == null) return Json(new { ok = false, msg = "Partido no encontrado." });
-            if (match.Stage.PredictionDeadline < DateTime.UtcNow)
-                return Json(new { ok = false, msg = "El plazo de predicciones cerró." });
+            if (DateTime.UtcNow >= TimeHelper.ToUtc(match.MatchDate).AddMinutes(-15))
+                return Json(new { ok = false, msg = "Las predicciones para este partido cerraron." });
 
             // Verificar que el usuario está inscrito
             var paid = await _db.Payments.Include(p => p.Stage)
@@ -437,9 +506,10 @@ namespace QuinielaApp.Controllers
             if (stageId.HasValue)
             {
                 var stage = tournament.Stages.FirstOrDefault(s => s.Id == stageId);
-                vm.StageId   = stageId;
-                vm.StageName = stage?.Name;
+                vm.StageId     = stageId;
+                vm.StageName   = stage?.Name;
                 vm.IsStageView = true;
+                vm.IsPartial   = stage?.Status == StageStatus.InProgress;
 
                 var results = await _db.StageResults
                     .Include(r => r.User)
@@ -447,13 +517,32 @@ namespace QuinielaApp.Controllers
                     .OrderBy(r => r.Rank)
                     .ToListAsync();
 
-                vm.Rows = results.Select(r => new LeaderboardRowVm
+                if (results.Any())
                 {
-                    Rank = r.Rank, UserId = r.UserId,
-                    Username = r.User.Username, FullName = r.User.FullName,
-                    TotalPoints = r.Points, ResultHits = r.ResultHits, ScoreHits = r.ScoreHits,
-                    IsCurrentUser = r.UserId == uid
-                }).ToList();
+                    vm.Rows = results.Select(r => new LeaderboardRowVm
+                    {
+                        Rank = r.Rank, UserId = r.UserId,
+                        Username = r.User.Username, FullName = r.User.FullName,
+                        TotalPoints = r.Points, ResultHits = r.ResultHits, ScoreHits = r.ScoreHits,
+                        IsCurrentUser = r.UserId == uid
+                    }).ToList();
+                }
+                else
+                {
+                    // Aún no terminó ningún partido — mostrar participantes inscritos con 0 pts
+                    var enrolled = await _db.TournamentEntries
+                        .Include(e => e.User)
+                        .Where(e => e.TournamentId == tournamentId)
+                        .OrderBy(e => e.User.FullName)
+                        .ToListAsync();
+                    vm.Rows = enrolled.Select((e, i) => new LeaderboardRowVm
+                    {
+                        Rank = i + 1, UserId = e.UserId,
+                        Username = e.User.Username, FullName = e.User.FullName,
+                        TotalPoints = 0,
+                        IsCurrentUser = e.UserId == uid
+                    }).ToList();
+                }
             }
             else
             {
@@ -621,17 +710,23 @@ namespace QuinielaApp.Controllers
           _paymentSvc = paymentSvc; _api = api; _env = env; }
 
         // Dashboard
-        public async Task<IActionResult> Index() => View(new AdminDashboardVm
+        public async Task<IActionResult> Index()
         {
-            TotalUsers        = await _db.Users.CountAsync(u => u.Role == "Player"),
-            ActiveTournaments = await _db.Tournaments.CountAsync(t => t.Status == TournamentStatus.Active),
-            TotalPredictions  = await _db.Predictions.CountAsync(),
-            PendingPayments   = await _db.Payments.CountAsync(p => p.Status == PaymentStatus.Pending),
-            Tournaments = await _db.Tournaments.Include(t => t.Stages)
-                .OrderByDescending(t => t.Id).Take(10).ToListAsync(),
-            RecentPayments = await _db.Payments.Include(p => p.User).Include(p => p.Stage)
-                .OrderByDescending(p => p.CreatedAt).Take(20).ToListAsync()
-        });
+            ViewBag.AdminBolsa = await _db.Payments
+                .Where(p => p.Status == PaymentStatus.Approved)
+                .SumAsync(p => (decimal?)p.Amount) ?? 0m;
+            return View(new AdminDashboardVm
+            {
+                TotalUsers        = await _db.Users.CountAsync(u => u.Role == "Player"),
+                ActiveTournaments = await _db.Tournaments.CountAsync(t => t.Status == TournamentStatus.Active),
+                TotalPredictions  = await _db.Predictions.CountAsync(),
+                PendingPayments   = await _db.Payments.CountAsync(p => p.Status == PaymentStatus.Pending),
+                Tournaments = await _db.Tournaments.Include(t => t.Stages)
+                    .OrderByDescending(t => t.Id).Take(10).ToListAsync(),
+                RecentPayments = await _db.Payments.Include(p => p.User).Include(p => p.Stage)
+                    .OrderByDescending(p => p.CreatedAt).Take(20).ToListAsync()
+            });
+        }
 
         // ── Torneo ────────────────────────────────────────
         [HttpGet] public IActionResult CreateTournament() => View(new CreateTournamentVm());
@@ -682,8 +777,10 @@ namespace QuinielaApp.Controllers
                 EntryFee            = vm.EntryFee,
                 PredictionDeadline  = TimeHelper.ToUtc(vm.PredictionDeadline),
                 OrderNum            = vm.OrderNum,
+                GroupKey            = string.IsNullOrWhiteSpace(vm.GroupKey) ? null : vm.GroupKey.Trim(),
                 Status              = StageStatus.Open
             };
+            if (vm.BannerFile != null) stage.BannerImagePath = await SaveFileAsync(vm.BannerFile, "banners");
             _db.Stages.Add(stage);
             await _db.SaveChangesAsync();
 
@@ -814,7 +911,8 @@ namespace QuinielaApp.Controllers
                 Name = s.Name, Type = s.Type.ToString(), EntryFee = s.EntryFee,
                 PredictionDeadline = TimeHelper.ToSvTime(s.PredictionDeadline),
                 OrderNum = s.OrderNum, Status = s.Status.ToString(),
-                GroupKey = s.GroupKey
+                GroupKey = s.GroupKey,
+                ExistingBanner = s.BannerImagePath
             });
         }
 
@@ -832,6 +930,7 @@ namespace QuinielaApp.Controllers
             s.GroupKey = string.IsNullOrWhiteSpace(vm.GroupKey) ? null : vm.GroupKey.Trim();
             if (Enum.TryParse<StageType>(vm.Type, out var st))     s.Type   = st;
             if (Enum.TryParse<StageStatus>(vm.Status, out var ss)) s.Status = ss;
+            if (vm.BannerFile != null) s.BannerImagePath = await SaveFileAsync(vm.BannerFile, "banners");
 
             await _db.SaveChangesAsync();
             TempData["Success"] = "Fase actualizada.";

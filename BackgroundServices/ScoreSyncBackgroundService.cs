@@ -127,7 +127,6 @@ namespace QuinielaApp.BackgroundServices
                 {
                     _log.LogInformation("Fase '{N}' completa — calculando puntos automáticamente...", stage.Name);
 
-                    // Champions Final → usar servicio especial con datos de eventos
                     if (stage.Tournament.ApiLeagueId == 2 && stage.Type == StageType.Final)
                         await specialSvc.CalculateAllAsync(stage.Id);
                     else
@@ -136,9 +135,14 @@ namespace QuinielaApp.BackgroundServices
                     _log.LogInformation("Puntos calculados para fase '{N}'.", stage.Name);
                 }
             }
-            else if (total > 0 && finished > 0 && stage.Status == StageStatus.Open)
+            else if (total > 0 && finished > 0)
             {
-                stage.Status = StageStatus.InProgress;
+                // Cálculo parcial: actualizar puntos conforme terminan partidos
+                var finishedMatches = stage.Matches.Where(m => m.Status == "FT").ToList();
+                await predSvc.CalculatePartialPointsAsync(stage.Id, finishedMatches);
+
+                if (stage.Status == StageStatus.Open)
+                    stage.Status = StageStatus.InProgress;
             }
 
             if (updated > 0)

@@ -58,9 +58,16 @@ namespace QuinielaApp.ViewModels
         public string   Status      { get; set; } = string.Empty;
         public decimal  EntryFee    { get; set; }
         public DateTime Deadline    { get; set; }
-        public int      TotalMatches{ get; set; }
-        public bool     IsPaid          { get; set; }
-        public bool     HasPendingPayment { get; set; }
+        public int      TotalMatches      { get; set; }
+        public int      OpenMatchesCount  { get; set; }
+        public int      ClosedMatchesCount{ get; set; }
+        public bool     IsPaid              { get; set; }
+        public bool     HasPendingPayment   { get; set; }
+        public bool     IsGroupPaymentLeader{ get; set; }
+        public bool     HasGroupPendingPayment  { get; set; }
+        public bool     HasGroupApprovedPayment { get; set; }
+        public string?  GroupKey            { get; set; }
+        public string?  BannerImagePath     { get; set; }
         public bool     CanPredict  { get; set; }
         public int      MyPoints    { get; set; }
         public int      MyRank      { get; set; }
@@ -141,6 +148,9 @@ namespace QuinielaApp.ViewModels
         public string   HomeTeamLogo { get; set; } = string.Empty;
         public string   AwayTeamLogo { get; set; } = string.Empty;
         public DateTime MatchDate    { get; set; }
+        public DateTime MatchDeadline{ get; set; }
+        public DateTime MatchDateSv  { get; set; }
+        public bool     CanPredict   { get; set; }
         public int?     HomeScore    { get; set; }
         public int?     AwayScore    { get; set; }
         public string   Status       { get; set; } = "NS";
@@ -186,6 +196,7 @@ namespace QuinielaApp.ViewModels
         public int?   StageId        { get; set; }
         public string? StageName     { get; set; }
         public bool   IsStageView    { get; set; }
+        public bool   IsPartial      { get; set; }
         public int    CurrentUserId  { get; set; }
         public List<LeaderboardRowVm> Rows { get; set; } = new();
         public List<StageTabVm> Stages { get; set; } = new();
@@ -240,6 +251,8 @@ namespace QuinielaApp.ViewModels
         public string   TournamentName { get; set; } = string.Empty;
         public string   Status       { get; set; } = "Open";
         public string?  GroupKey     { get; set; }
+        public IFormFile? BannerFile     { get; set; }
+        public string?    ExistingBanner { get; set; }
     }
 
     // ── Admin: crear torneo ───────────────────────────────
@@ -267,7 +280,8 @@ namespace QuinielaApp.ViewModels
         [Required][Range(0.01, 9999)] public decimal EntryFee  { get; set; } = 20m;
         [Required] public DateTime PredictionDeadline { get; set; }
         public int OrderNum        { get; set; } = 1;
-        public string? GroupKey     { get; set; }
+        public string? GroupKey    { get; set; }
+        public IFormFile? BannerFile { get; set; }
         // Jornadas disponibles para mostrar en el select
         public List<string> AvailableRounds { get; set; } = new();
         public string TournamentName { get; set; } = string.Empty;

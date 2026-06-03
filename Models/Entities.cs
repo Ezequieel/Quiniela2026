@@ -61,7 +61,8 @@ namespace QuinielaApp.Models
         public DateTime     PredictionDeadline { get; set; }           // hasta cuándo predecir
         public DateTime     CreatedAt    { get; set; } = DateTime.UtcNow;
         /// Clave de agrupación para pago compartido. Fases con la misma clave comparten un solo pago.
-        public string?      GroupKey     { get; set; }
+        public string?      GroupKey         { get; set; }
+        public string?      BannerImagePath  { get; set; }
 
         public ICollection<Match>        Matches  { get; set; } = new List<Match>();
         public ICollection<StageEntry>   Entries  { get; set; } = new List<StageEntry>();

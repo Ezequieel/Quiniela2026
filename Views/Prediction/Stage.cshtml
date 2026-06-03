@@ -20,11 +20,7 @@
         <h1>@Model.StageName</h1>
         @if (Model.CanPredict)
         {
-            <div class="deadline-bar">
-                Predicciones cierran el @TimeHelper.Format(Model.Deadline, "dd MMM yyyy") a las @TimeHelper.Format(Model.Deadline, "HH:mm") (hora SV)
-                &ensp;·&ensp;
-                <span id="countdown" class="countdown"></span>
-            </div>
+            
         }
     </div>
 }
@@ -51,10 +47,11 @@ else
     </div>
 }
 
-@if (!Model.CanPredict && Model.Matches.Any(m => !m.IsFinished))
+@if (!Model.Matches.Any(m => !m.IsFinished && !m.IsLive && m.CanPredict)
+     && Model.Matches.Any(m => !m.IsFinished && !m.IsLive))
 {
     <div class="info-banner @(isMundial ? "wc-theme" : "")" style="margin-bottom:1.2rem">
-        El período de predicciones ha cerrado para esta fase.
+        Las predicciones de todos los partidos de esta fase ya cerraron.
     </div>
 }
 
@@ -68,13 +65,45 @@ else
 <div class="matches-grid @(isMundial ? "wc-theme" : "")">
 @foreach (var m in Model.Matches)
 {
-    <div class="match-pred-card @(isMundial ? "wc-theme" : "") @(m.IsLive ? "is-live" : m.IsFinished ? "is-done" : "")"
+    var minsLeft = (int)(TimeHelper.ToUtc(m.MatchDeadline) - DateTime.UtcNow).TotalMinutes;
+    var dlSv     = m.MatchDeadline;  // ya en hora SV local, sin conversión adicional
+    <div class="match-pred-card @(isMundial ? "wc-theme" : "") @(m.IsLive ? "is-live" : m.IsFinished ? "is-done" : "") @(!m.CanPredict && !m.IsFinished && !m.IsLive ? "pred-closed" : "")"
          id="mc-@m.Id">
 
+        <div class="match-datetime">
+            <span class="match-date-sv">
+                @m.MatchDateSv.ToString("dd MMM") · @m.MatchDateSv.ToString("HH:mm")<span class="match-tz">SV</span>
+            </span>
+            @if (!m.IsFinished && !m.IsLive)
+            {
+                if (m.CanPredict)
+                {
+                    <span class="match-deadline-badge">
+                        @if (minsLeft <= 60)
+                        {
+                            <span class="match-deadline-urgent">Cierra en @minsLeft min</span>
+                        }
+                        else if (minsLeft <= 1440)
+                        {
+                            <span>Cierra @dlSv.ToString("HH:mm")</span>
+                        }
+                        else
+                        {
+                            <span>Cierra @dlSv.ToString("dd MMM HH:mm")</span>
+                        }
+                    </span>
+                }
+                else
+                {
+                    <span class="match-closed-badge">Predicciones cerradas</span>
+                }
+            }
+        </div>
+
         <div class="match-state">
-            @if (m.IsLive)     { <span class="badge-live">En vivo @m.StatusLabel</span> }
+            @if (m.IsLive)         { <span class="badge-live">En vivo @m.StatusLabel</span> }
             else if (m.IsFinished) { <span class="badge-ft">Finalizado</span> }
-            else               { <span class="badge-ns">@m.StatusLabel</span> }
+            else                   { <span class="badge-ns">@m.MatchDateSv.ToString("dd/MM HH:mm")</span> }
         </div>
 
         <div class="match-teams">
@@ -98,7 +127,7 @@ else
         </div>
 
         <div class="pred-section">
-            @if (!m.IsFinished && Model.CanPredict)
+            @if (!m.IsFinished && m.CanPredict)
             {
                 <div class="pred-label">¿Quién gana?</div>
                 <div class="pred-result-btns" id="res-@m.Id">
@@ -167,7 +196,7 @@ else
                     }
                 </div>
             }
-            else if (!Model.CanPredict && !m.IsFinished)
+            else if (!m.CanPredict && !m.IsFinished)
             {
                 <p class="text-muted" style="font-size:.78rem;text-align:center;padding:.4rem 0">Sin predicción registrada</p>
             }
