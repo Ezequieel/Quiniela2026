@@ -72,26 +72,24 @@
             <span asp-validation-for="PaymentInfo" class="field-err"></span>
         </div>
 
-        <button type="submit" class="btn btn-primary btn-lg">Crear torneo</button>
+        <div style="display:flex;gap:.5rem">
+            <button type="submit" class="btn btn-primary btn-lg">Crear torneo</button>
+            <a href="/Admin/Index" class="btn btn-secondary">Cancelar</a>
+        </div>
     </form>
 </div>
 
 @section Scripts {
 <script>
-const MAX_SIZES = { 'logo-file': 2, 'qr-file': 3 };
-
 function validateFile(input, maxMB, errId, hintId) {
     const errEl  = document.getElementById(errId);
     const hintEl = document.getElementById(hintId);
     errEl.textContent = '';
-
     if (!input.files || input.files.length === 0) return true;
-
-    const file    = input.files[0];
+    const file = input.files[0];
     const maxBytes = maxMB * 1024 * 1024;
-
     if (file.size > maxBytes) {
-        errEl.textContent = `El archivo seleccionado supera el tamaño máximo permitido de ${maxMB} MB.`;
+        errEl.textContent = `El archivo seleccionado supera el tamaño máximo de ${maxMB} MB.`;
         input.value = '';
         return false;
     }

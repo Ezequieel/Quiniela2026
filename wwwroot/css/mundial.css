@@ -1,56 +1,74 @@
 /* ═══════════════════════════════════════════════════════
-   FIFA WORLD CUP 2026 — Estilo editorial deportivo
+   FIFA WORLD CUP 2026 — Estilos específicos del Mundial
 ═══════════════════════════════════════════════════════ */
 
-/* ── Hero principal ── */
+/* ── Hero principal del Mundial — banner oscuro con cancha ── */
 .wc-hero {
-  background: #EDE8DF;
+  background-color: #0a1a0a;
+  background:
+    linear-gradient(
+      to bottom,
+      rgba(10,10,10,.82) 0%,
+      rgba(10,10,10,.70) 40%,
+      rgba(10,10,10,.88) 100%
+    ),
+    url('/img/cancha_bg.jpg') center center / cover no-repeat;
   border-top: none;
-  border-bottom: 2px solid #1A1A1A;
+  border-bottom: none;
   border-radius: 0;
-  padding: 28px 24px 22px;
-  margin-bottom: 14px;
+  padding: 36px 24px 28px;
+  margin-bottom: 0;
   position: relative;
   overflow: hidden;
   text-align: center;
 }
+
+/* SVG fallback — patrón de cancha */
 .wc-hero::before {
   content: '';
-  position: absolute; top: 0; left: 0; right: 0; height: 4px;
-  background: linear-gradient(90deg,
-    #C8001E 0 14%, #E8580A 14% 28%, #8DC63F 28% 42%,
-    #3B6FD4 42% 57%, #6B2D8B 57% 71%, #1A7A3C 71% 85%,
-    #C9A84C 85% 100%);
+  position: absolute; inset: 0;
+  background-image:
+    linear-gradient(rgba(255,255,255,.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,.04) 1px, transparent 1px),
+    repeating-linear-gradient(
+      90deg,
+      rgba(255,255,255,.015) 0px,
+      rgba(255,255,255,.015) 40px,
+      transparent 40px,
+      transparent 80px
+    );
+  background-size: 80px 80px, 80px 80px, 80px 100%;
+  pointer-events: none;
+  z-index: 0;
 }
 
-/* Esquinas decorativas */
-.wc-hero-corner-tl {
-  position: absolute; top: 0; left: 0;
-  width: 120px; height: 120px;
-  background: #C8001E;
-  border-radius: 0 0 100% 0;
-  opacity: .04; filter: blur(18px);
+/* Esquinas decorativas — eliminadas (dark theme) */
+.wc-hero-corner-tl,
+.wc-hero-corner-tr,
+.wc-hero-corner-bl,
+.wc-hero-corner-br { display: none; }
+
+/* Elementos field del banner */
+.banner-field-circle {
+  position: absolute;
+  width: 280px; height: 280px;
+  border-radius: 50%;
+  border: 1px solid rgba(255,255,255,.05);
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  pointer-events: none; z-index: 0;
 }
-.wc-hero-corner-tr {
-  position: absolute; top: 0; right: 0;
-  width: 90px; height: 90px;
-  background: #8DC63F;
-  border-radius: 0 0 0 100%;
-  opacity: .04; filter: blur(14px);
+.banner-field-midline {
+  position: absolute;
+  left: 50%; top: 0; bottom: 0;
+  width: 1px;
+  background: rgba(255,255,255,.04);
+  pointer-events: none; z-index: 0;
 }
-.wc-hero-corner-bl {
-  position: absolute; bottom: 0; left: 0;
-  width: 70px; height: 70px;
-  background: #6B2D8B;
-  border-radius: 0 100% 0 0;
-  opacity: .04; filter: blur(14px);
-}
-.wc-hero-corner-br {
-  position: absolute; bottom: 0; right: 0;
-  width: 100px; height: 100px;
-  background: #1A3A8C;
-  border-radius: 100% 0 0 0;
-  opacity: .04; filter: blur(18px);
+
+/* Todo el contenido del hero sobre el patrón */
+.wc-hero > *:not(.banner-field-circle):not(.banner-field-midline):not(.wc-hero-corner-tl):not(.wc-hero-corner-tr):not(.wc-hero-corner-bl):not(.wc-hero-corner-br) {
+  position: relative; z-index: 1;
 }
 
 /* Badge eyebrow */
@@ -58,30 +76,30 @@
   display: inline-block;
   font-family: 'Barlow Condensed', sans-serif;
   font-size: 10px; font-weight: 900;
-  background: rgba(200,0,30,.08);
-  border: 1px solid rgba(200,0,30,.2);
-  color: #C8001E;
+  background: rgba(192,0,0,.12);
+  border: 1px solid rgba(192,0,0,.25);
+  color: #ff6666;
   padding: 3px 12px; border-radius: 2px;
   letter-spacing: .14em; text-transform: uppercase;
   margin-bottom: 14px;
   position: relative; z-index: 1;
 }
 
-/* Trofeo */
+/* Trofeo / Logo */
 .wc-trophy-img-wrap {
   position: relative; z-index: 1;
   margin-bottom: 8px;
   display: flex; justify-content: center;
-  min-height: 140px; align-items: center;
+  min-height: 130px; align-items: center;
 }
 .wc-trophy-img {
-  width: 130px; height: auto;
+  width: 120px; height: auto;
   animation: float 4s ease-in-out infinite;
-  filter: drop-shadow(0 4px 16px rgba(200,0,30,.2));
+  filter: drop-shadow(0 4px 20px rgba(192,0,0,.3));
 }
 @media (max-width: 480px) {
-  .wc-trophy-img-wrap { min-height: 100px; }
-  .wc-trophy-img { width: 100px; }
+  .wc-trophy-img-wrap { min-height: 90px; }
+  .wc-trophy-img { width: 90px; }
 }
 @keyframes float {
   0%, 100% { transform: translateY(0); }
@@ -91,17 +109,17 @@
 /* Título */
 .wc-hero-title {
   font-family: 'Barlow Condensed', sans-serif;
-  font-size: clamp(40px, 8vw, 72px);
-  font-weight: 900; color: #1A1A1A;
+  font-size: clamp(36px, 7vw, 64px);
+  font-weight: 900; color: #fff;
   text-transform: uppercase; line-height: .88;
   letter-spacing: -.01em; margin-bottom: 8px;
   position: relative; z-index: 1;
 }
-.wc-hero-title span { color: #C8001E; display: block; }
+.wc-hero-title span { color: #ff4444; display: block; }
 
 /* Subtítulo */
 .wc-hero-sub {
-  font-size: 11px; color: #888;
+  font-size: 11px; color: rgba(255,255,255,.45);
   letter-spacing: .12em; text-transform: uppercase;
   position: relative; z-index: 1;
 }
@@ -113,21 +131,21 @@
   position: relative; z-index: 1;
 }
 .wc-cd-unit {
-  background: #fff;
-  border: .5px solid #D5CFC3;
-  border-radius: 2px; padding: 10px 14px;
+  background: rgba(255,255,255,.06);
+  border: 1px solid rgba(255,255,255,.1);
+  border-radius: 4px; padding: 10px 14px;
   text-align: center; min-width: 64px; flex: 1; max-width: 84px;
 }
 .wc-cd-num {
   display: block;
   font-family: 'Barlow Condensed', sans-serif;
   font-size: clamp(24px, 5vw, 36px); font-weight: 900;
-  color: #C8001E; line-height: 1;
+  color: #fff; line-height: 1;
   font-variant-numeric: tabular-nums;
 }
 .wc-cd-lbl {
   display: block;
-  font-size: 9px; color: #888;
+  font-size: 9px; color: rgba(255,255,255,.4);
   text-transform: uppercase; letter-spacing: .1em; margin-top: 4px;
 }
 
@@ -135,81 +153,46 @@
 .wc-hero-stats {
   display: flex; justify-content: center; flex-wrap: wrap;
   position: relative; z-index: 1;
-  border-top: .5px solid #D5CFC3;
+  border-top: 1px solid rgba(255,255,255,.1);
   padding-top: 14px; margin-top: 14px;
 }
 .wc-hero-stat {
   text-align: center; flex: 1; min-width: 80px;
   padding: 0 .8rem;
-  border-right: .5px solid #D5CFC3;
+  border-right: 1px solid rgba(255,255,255,.08);
 }
 .wc-hero-stat:last-child { border-right: none; }
 .wc-hero-stat-num {
   display: block;
   font-family: 'Barlow Condensed', sans-serif;
   font-size: clamp(22px, 4vw, 32px); font-weight: 900;
-  color: #C8001E; line-height: 1;
+  color: #fff; line-height: 1;
 }
 .wc-hero-stat-lbl {
   display: block; font-size: 9px;
-  color: #888;
+  color: rgba(255,255,255,.4);
   text-transform: uppercase; letter-spacing: .08em; margin-top: 4px;
 }
 
-/* ── Stage header en predicciones ── */
-.wc-stage-header {
-  background: #1A1A1A; border-radius: 2px;
-  padding: 14px 16px; margin-bottom: 14px;
-  position: relative; overflow: hidden;
-  border: .5px solid rgba(245,240,232,.06);
+/* ── Stage header en predicciones (ya definido en app.css, overrides aquí) ── */
+.wc-stage-header .header-actions .btn-secondary {
+  background: rgba(255,255,255,.1);
+  border-color: rgba(255,255,255,.15);
+  color: rgba(255,255,255,.8);
 }
-.wc-stage-header::before {
-  content: '';
-  position: absolute; top: 0; left: 0; right: 0; height: 3px;
-  background: linear-gradient(90deg,
-    #C8001E 0 14%, #E8580A 14% 28%, #8DC63F 28% 42%,
-    #3B6FD4 42% 57%, #6B2D8B 57% 71%, #1A7A3C 71% 85%,
-    #C9A84C 85% 100%);
+.wc-stage-header .header-actions .btn-secondary:hover {
+  background: rgba(255,255,255,.18);
+  color: #fff;
 }
-.wc-stage-header h1 {
-  font-family: 'Barlow Condensed', sans-serif !important;
-  color: #F5F0E8 !important;
-  text-transform: uppercase;
-}
-.wc-stage-header .breadcrumb   { color: #C8001E; }
-.wc-stage-header .deadline-bar { color: rgba(245,240,232,.4); }
-.wc-stage-header .countdown    { color: #C8001E; font-weight: 700; }
 
-/* ── Leaderboard header mundial ── */
-.lb-wc-header {
-  background: #1A1A1A; border-radius: 2px 2px 0 0;
-  padding: 14px 16px; text-align: left;
-  border: .5px solid #D5CFC3; border-bottom: none;
-  position: relative;
-}
-.lb-wc-header::before {
-  content: '';
-  position: absolute; top: 0; left: 0; right: 0; height: 3px;
-  background: linear-gradient(90deg,
-    #C8001E 0 14%, #E8580A 14% 28%, #8DC63F 28% 42%,
-    #3B6FD4 42% 57%, #6B2D8B 57% 71%, #1A7A3C 71% 85%,
-    #C9A84C 85% 100%);
-  border-radius: 2px 2px 0 0;
-}
-.lb-wc-title {
-  font-family: 'Barlow Condensed', sans-serif;
-  font-size: 18px; font-weight: 900;
-  color: #F5F0E8; text-transform: uppercase; letter-spacing: .08em;
-}
-.lb-wc-sub { font-size: 11px; color: rgba(245,240,232,.35); margin-top: 3px; }
+/* ── Tournament block overrides ── */
+.tournament-block.wc-theme { border-color: rgba(192,0,0,.2); }
+.tournament-block.wc-theme .tournament-header { background: var(--bg); }
+.tournament-block.ucl-theme { border-color: rgba(0,48,135,.3); }
+.tournament-block.ucl-theme::before { background: linear-gradient(90deg, #003087 0 60%, #FFD700 60% 80%, #C0C0C0 80%); }
 
-/* ── Tournament block overrides para Mundial ── */
-.tournament-block.wc-theme {
-  border-color: rgba(200,0,30,.2);
-}
-.tournament-block.wc-theme .tournament-header {
-  background: #F5F0E8;
-}
-.tournament-block.ucl-theme {
-  border-color: rgba(0,48,135,.3);
+@media (max-width: 480px) {
+  .wc-hero { padding: 24px 14px 20px; }
+  .wc-countdown { gap: 4px; }
+  .wc-cd-unit { min-width: 52px; padding: 8px 10px; }
 }

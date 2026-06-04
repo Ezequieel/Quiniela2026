@@ -1,6 +1,23 @@
 @model PredictionLogVm
 @{ ViewData["Title"] = "Registro de predicciones"; }
 
+@if (!string.IsNullOrEmpty(Model.FilterUserName))
+{
+    <div class="history-profile-card">
+        <div class="hpc-avatar">@Model.FilterUserName[0].ToString().ToUpper()</div>
+        <div>
+            <div class="hpc-name">@Model.FilterUserName</div>
+            <div class="hpc-handle">Registro de predicciones</div>
+        </div>
+        <div class="hpc-stats" style="margin-left:auto">
+            <div class="hpc-stat">
+                <span class="hpc-num">@Model.TotalRows</span>
+                <span class="hpc-lbl">Predicciones</span>
+            </div>
+        </div>
+    </div>
+}
+
 <div class="page-header">
     <div>
         <a asp-controller="Tournament" asp-action="Index" class="breadcrumb">← Torneos</a>
@@ -99,19 +116,16 @@
                           r.IsFinished && r.ResultCorrect == true ? "log-ok" :
                           r.IsFinished && r.ResultCorrect == false ? "log-miss" : "")">
 
-                        <!-- Hora -->
                         <td class="log-time">
                             <span class="log-date">@TimeHelper.Format(r.UpdatedAt, "dd/MM")</span>
                             <span class="log-hour">@TimeHelper.Format(r.UpdatedAt, "HH:mm")</span>
                         </td>
 
-                        <!-- Participante -->
                         <td>
                             <div class="log-fullname">@r.FullName</div>
                             <div class="log-username">@@@r.Username</div>
                         </td>
 
-                        <!-- Partido -->
                         <td class="log-match">
                             <div class="log-match-teams">
                                 <img src="@r.HomeTeamLogo" class="log-logo" onerror="this.style.display='none'" />
@@ -123,10 +137,8 @@
                             <div class="log-match-date">@TimeHelper.Format(r.MatchDate, "dd/MM HH:mm")</div>
                         </td>
 
-                        <!-- Fase -->
                         <td class="log-stage">@r.StageName</td>
 
-                        <!-- Predicción de resultado -->
                         <td>
                             <span class="log-pred-result
                                 @(r.ResultPred == "Home" ? "pred-home" :
@@ -135,10 +147,8 @@
                             </span>
                         </td>
 
-                        <!-- Marcador predicho -->
                         <td class="log-score-pred">@r.ScorePred</td>
 
-                        <!-- Resultado real -->
                         <td class="log-score-real">
                             @if (r.IsFinished)
                             {
@@ -165,7 +175,6 @@
                             }
                         </td>
 
-                        <!-- Puntos -->
                         <td style="text-align:center">
                             @if (r.IsFinished)
                             {
@@ -186,64 +195,24 @@
 @section Scripts {
 <style>
 @@media print {
-    .navbar, .app-footer, .log-filters, .page-header .btn,
-    .breadcrumb { display: none !important; }
-
+    .topbar, .app-footer, .log-filters, .page-header .btn,
+    .breadcrumb, .history-profile-card { display: none !important; }
     body { background: #fff !important; color: #000 !important; font-size: 10px !important; }
-
     .app-main { margin: 0 !important; padding: 0 !important; max-width: 100% !important; }
-
     .page-header h1 { color: #000 !important; font-size: 14px !important; }
-    .page-header p   { color: #555 !important; }
-
     .card { box-shadow: none !important; border: 1px solid #ccc !important; }
-
     .lb-table { width: 100% !important; border-collapse: collapse !important; }
-    .lb-table thead th {
-        background: #1a1a2e !important;
-        color: #c9a84c !important;
-        padding: 5px 6px !important;
-        font-size: 8px !important;
-        border: 1px solid #ccc !important;
-        -webkit-print-color-adjust: exact !important;
-        print-color-adjust: exact !important;
-    }
-    .lb-table tbody td {
-        padding: 4px 6px !important;
-        border: 1px solid #ddd !important;
-        color: #000 !important;
-        background: #fff !important;
-        font-size: 9px !important;
-    }
+    .lb-table thead th { background: #111 !important; color: #D4A800 !important; padding: 5px 6px !important; font-size: 8px !important; border: 1px solid #ccc !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+    .lb-table tbody td { padding: 4px 6px !important; border: 1px solid #ddd !important; color: #000 !important; background: #fff !important; font-size: 9px !important; }
     .log-exact td { background: #fffde7 !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
     .log-ok    td { background: #f1f8e9 !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
     .log-miss  td { background: #fce4e4 !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-
-    .log-pred-result, .log-badge {
-        border: 1px solid #ccc !important;
-        color: #000 !important;
-        background: #f5f5f5 !important;
-        -webkit-print-color-adjust: exact !important;
-        print-color-adjust: exact !important;
-    }
-    .log-fullname { color: #000 !important; font-weight: bold !important; }
-    .log-username { color: #555 !important; }
-    .log-date, .log-hour { color: #000 !important; }
-    .log-match-teams { color: #000 !important; }
-    .log-stage { color: #555 !important; }
-    .log-real-score { color: #000 !important; }
-    .log-pts-ok   { color: #7a5c00 !important; }
-    .log-pts-zero { color: #999 !important; }
-
-    @@page {
-        size: A4 landscape;
-        margin: 1cm;
-    }
+    .log-pred-result, .log-badge { border: 1px solid #ccc !important; color: #000 !important; background: #f5f5f5 !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+    @@page { size: A4 landscape; margin: 1cm; }
 }
 </style>
 <script>
 function exportPdf() {
-    // Agregar título de impresión
     document.title = 'Predicciones — @Model.TournamentName — @DateTime.Now.ToString("dd/MM/yyyy")';
     window.print();
 }

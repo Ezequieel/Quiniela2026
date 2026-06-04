@@ -4,11 +4,13 @@
 @* ── Pantalla de confirmación post-submit ── *@
 @if (ViewBag.ConfirmMsg != null)
 {
-    <div class="auth-wrap" style="min-height:70vh;align-items:center;justify-content:center">
+    <div style="display:flex;align-items:center;justify-content:center;min-height:60vh">
         <div class="card" style="max-width:520px;width:100%;text-align:center;padding:2.4rem 2rem">
             <div style="font-size:3.5rem;margin-bottom:1rem">⏳</div>
-            <h2 style="margin-bottom:.6rem">Comprobante recibido</h2>
-            <p style="color:var(--text3);line-height:1.6;margin-bottom:1.6rem">
+            <h2 style="font-family:'Barlow Condensed',sans-serif;font-size:24px;font-weight:900;text-transform:uppercase;letter-spacing:.04em;margin-bottom:.6rem;color:var(--text-1)">
+                Comprobante recibido
+            </h2>
+            <p style="color:var(--text-3);line-height:1.6;margin-bottom:1.6rem;font-size:.88rem">
                 Tu comprobante de pago fue enviado correctamente y está pendiente de revisión.
                 El administrador lo aprobará en breve y recibirás acceso para hacer tus predicciones.
             </p>
@@ -29,6 +31,7 @@ else
 </div>
 
 <div class="payment-layout">
+    <!-- Columna izquierda — instrucciones -->
     <div class="card">
         <h3 class="card-title">Instrucciones de pago</h3>
         <div class="amount-badge">$@Model.EntryFee</div>
@@ -54,7 +57,7 @@ else
                     <div class="qr-url-alt">
                         <p class="qr-url-label">¿No puedes escanear el QR?</p>
                         <a href="@Model.PaymentUrl" target="_blank" rel="noopener"
-                           class="btn btn-outline btn-sm qr-url-btn">
+                           class="btn btn-outline btn-sm">
                             Pagar por enlace directo →
                         </a>
                     </div>
@@ -64,7 +67,7 @@ else
 
         <div class="points-system">
             <h4>Sistema de puntos</h4>
-            <p style="font-size:.78rem;color:var(--text3);margin-bottom:.8rem;font-style:italic">
+            <p style="font-size:.78rem;color:var(--text-3);margin-bottom:.8rem;font-style:italic">
                 El puntaje NO es acumulativo — se otorga el mayor nivel alcanzado por partido.
             </p>
             <div class="points-row">
@@ -84,18 +87,18 @@ else
         </div>
     </div>
 
+    <!-- Columna derecha — subir comprobante -->
     <div class="card">
         <h3 class="card-title">Subir comprobante</h3>
 
-        @* Bloque de fases cubiertas *@
         @if (Model.RelatedStageNames.Count > 1)
         {
-            <div style="background:rgba(34,197,94,.08);border:1px solid rgba(34,197,94,.3);
-                        border-radius:8px;padding:.9rem 1rem;margin-bottom:1.2rem">
-                <p style="font-weight:600;font-size:.85rem;margin:0 0 .45rem;color:#16a34a">
+            <div style="background:rgba(26,122,60,.08);border:1px solid rgba(26,122,60,.25);
+                        border-radius:var(--r);padding:.9rem 1rem;margin-bottom:1.2rem">
+                <p style="font-weight:600;font-size:.85rem;margin:0 0 .45rem;color:var(--green)">
                     ✅ Este pago único te da acceso a @Model.RelatedStageNames.Count fases:
                 </p>
-                <ul style="margin:0;padding-left:1.1rem;font-size:.83rem;color:var(--text2);line-height:1.7">
+                <ul style="margin:0;padding-left:1.1rem;font-size:.83rem;color:var(--text-2);line-height:1.7">
                     @foreach (var name in Model.RelatedStageNames)
                     {
                         <li>@name</li>
@@ -105,7 +108,7 @@ else
         }
         else
         {
-            <p class="text-muted" style="margin-bottom:1.2rem">
+            <p class="text-muted" style="margin-bottom:1.2rem;font-size:.86rem">
                 Sube tu comprobante para activar tu inscripción en <strong>@Model.StageName</strong>.
                 El administrador revisará el pago y te dará acceso en breve.
             </p>
@@ -155,7 +158,7 @@ function previewFile(input) {
     if (file.type.startsWith('image/')) {
         const reader = new FileReader();
         reader.onload = e => {
-            preview.innerHTML = `<img src="${e.target.result}" style="max-height:140px;border-radius:6px;"/><span>${file.name}</span>`;
+            preview.innerHTML = `<img src="${e.target.result}" style="max-height:140px;border-radius:4px;"/><span>${file.name}</span>`;
         };
         reader.readAsDataURL(file);
     } else {

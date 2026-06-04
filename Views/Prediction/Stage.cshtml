@@ -13,15 +13,34 @@
         <p class="ucl-subtitle">Puskás Aréna · Budapest · 30 Mayo 2026</p>
     </div>
 }
+
 @if (isMundial)
 {
     <div class="wc-stage-header">
-        <a asp-controller="Tournament" asp-action="Index" class="breadcrumb">← @Model.TournamentName</a>
-        <h1>@Model.StageName</h1>
-        @if (Model.CanPredict)
-        {
-            
-        }
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:.8rem">
+            <div>
+                <a asp-controller="Tournament" asp-action="Index" class="breadcrumb">← @Model.TournamentName</a>
+                <h1 style="font-family:'Barlow Condensed',sans-serif;font-size:clamp(20px,4vw,28px);font-weight:900;color:#fff;text-transform:uppercase;letter-spacing:.04em;margin-top:4px">
+                    @Model.StageName
+                </h1>
+                @if (Model.CanPredict)
+                {
+                    <div class="deadline-bar" style="margin-top:4px">
+                        Cierre @TimeHelper.Format(Model.Deadline, "dd MMM yyyy") a las @TimeHelper.Format(Model.Deadline, "HH:mm") (hora SV)
+                        &ensp;·&ensp;
+                        <span id="countdown" class="countdown"></span>
+                    </div>
+                }
+            </div>
+            <div>
+                <a asp-controller="Leaderboard" asp-action="Index"
+                   asp-route-tournamentId="@Model.TournamentId" asp-route-stageId="@Model.StageId"
+                   class="btn btn-sm"
+                   style="background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.15);color:rgba(255,255,255,.8);font-family:'Barlow Condensed',sans-serif;font-weight:700;text-transform:uppercase;letter-spacing:.08em">
+                    Clasificación
+                </a>
+            </div>
+        </div>
     </div>
 }
 else
@@ -50,23 +69,23 @@ else
 @if (!Model.Matches.Any(m => !m.IsFinished && !m.IsLive && m.CanPredict)
      && Model.Matches.Any(m => !m.IsFinished && !m.IsLive))
 {
-    <div class="info-banner @(isMundial ? "wc-theme" : "")" style="margin-bottom:1.2rem">
+    <div class="info-banner" style="margin-bottom:1.2rem">
         Las predicciones de todos los partidos de esta fase ya cerraron.
     </div>
 }
 
-<div class="pts-legend @(isMundial ? "wc-theme" : "")">
+<div class="pts-legend">
     <span>Marcador exacto — <strong>5 pts</strong></span>
     <span>Solo resultado correcto — <strong>2 pts</strong></span>
     <span>No aciertas nada — <strong>0 pts</strong></span>
-    <span style="color:var(--gold);font-size:.75rem">El puntaje no es acumulativo, se da el mayor nivel alcanzado</span>
+    <span style="color:var(--amarillo);font-size:.75rem">El puntaje no es acumulativo, se da el mayor nivel alcanzado</span>
 </div>
 
-<div class="matches-grid @(isMundial ? "wc-theme" : "")">
+<div class="matches-grid">
 @foreach (var m in Model.Matches)
 {
     var minsLeft = (int)(TimeHelper.ToUtc(m.MatchDeadline) - DateTime.UtcNow).TotalMinutes;
-    var dlSv     = m.MatchDeadline;  // ya en hora SV local, sin conversión adicional
+    var dlSv     = m.MatchDeadline;
     <div class="match-pred-card @(isMundial ? "wc-theme" : "") @(m.IsLive ? "is-live" : m.IsFinished ? "is-done" : "") @(!m.CanPredict && !m.IsFinished && !m.IsLive ? "pred-closed" : "")"
          id="mc-@m.Id">
 
@@ -210,7 +229,7 @@ else
     <div style="text-align:center;margin-top:1.5rem">
         <a asp-controller="Leaderboard" asp-action="Index"
            asp-route-tournamentId="@Model.TournamentId" asp-route-stageId="@Model.StageId"
-           class="btn btn-wc">Ver clasificación</a>
+           class="btn btn-primary">Ver clasificación</a>
     </div>
 }
 
@@ -244,27 +263,22 @@ function adjustScore(matchId, result) {
         hInput.value = val; aInput.value = val;
         hInput.oninput = () => { aInput.value = hInput.value; saveScore(matchId); };
         aInput.oninput = () => { hInput.value = aInput.value; saveScore(matchId); };
-        // Guardar el marcador default inmediatamente
         saveScore(matchId);
     } else if (result === 'Home') {
-        // Asegurar que ambos campos tengan valor y local > visitante
         if (aInput.value === '') aInput.value = 0;
         if (hInput.value === '') hInput.value = 0;
         const hv = parseInt(hInput.value), av = parseInt(aInput.value);
         if (hv <= av) hInput.value = av + 1;
         hInput.oninput = () => { validateScore(matchId, 'Home'); saveScore(matchId); };
         aInput.oninput = () => { validateScore(matchId, 'Home'); saveScore(matchId); };
-        // Guardar el marcador default inmediatamente
         saveScore(matchId);
     } else {
-        // Asegurar que ambos campos tengan valor y visitante > local
         if (hInput.value === '') hInput.value = 0;
         if (aInput.value === '') aInput.value = 0;
         const hv = parseInt(hInput.value), av = parseInt(aInput.value);
         if (av <= hv) aInput.value = hv + 1;
         hInput.oninput = () => { validateScore(matchId, 'Away'); saveScore(matchId); };
         aInput.oninput = () => { validateScore(matchId, 'Away'); saveScore(matchId); };
-        // Guardar el marcador default inmediatamente
         saveScore(matchId);
     }
 }

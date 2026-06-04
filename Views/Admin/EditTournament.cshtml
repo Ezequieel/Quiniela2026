@@ -40,7 +40,7 @@
         @if (!string.IsNullOrEmpty(Model.ExistingLogo))
         {
             <div style="margin-bottom:.8rem;display:flex;align-items:center;gap:.75rem">
-                <img src="@Model.ExistingLogo" style="height:44px;object-fit:contain;border:1px solid var(--border);border-radius:6px;padding:4px;background:var(--g50)" />
+                <img src="@Model.ExistingLogo" style="height:44px;object-fit:contain;border:1px solid var(--border);border-radius:4px;padding:4px;background:var(--bg)" />
                 <span class="text-muted" style="font-size:.78rem">Logo actual</span>
             </div>
         }
@@ -55,7 +55,7 @@
         @if (!string.IsNullOrEmpty(Model.ExistingQr))
         {
             <div style="margin-bottom:.8rem;display:flex;align-items:center;gap:.75rem">
-                <img src="@Model.ExistingQr" style="height:64px;object-fit:contain;border:1px solid var(--border);border-radius:6px;padding:4px;background:#fff" />
+                <img src="@Model.ExistingQr" style="height:64px;object-fit:contain;border:1px solid var(--border);border-radius:4px;padding:4px;background:#fff" />
                 <span class="text-muted" style="font-size:.78rem">QR actual</span>
             </div>
         }
@@ -93,14 +93,11 @@ function validateFile(input, maxMB, errId, hintId) {
     const errEl  = document.getElementById(errId);
     const hintEl = document.getElementById(hintId);
     errEl.textContent = '';
-
     if (!input.files || input.files.length === 0) return true;
-
-    const file     = input.files[0];
+    const file = input.files[0];
     const maxBytes = maxMB * 1024 * 1024;
-
     if (file.size > maxBytes) {
-        errEl.textContent = `El archivo seleccionado supera el tamaño máximo permitido de ${maxMB} MB.`;
+        errEl.textContent = `El archivo seleccionado supera el tamaño máximo de ${maxMB} MB.`;
         input.value = '';
         hintEl.textContent = `Tamaño máximo permitido: ${maxMB} MB`;
         hintEl.style.color = '';

@@ -14,19 +14,19 @@
 }
 
 @* ── Pendientes ── *@
-<h2 style="margin:1.4rem 0 .6rem">
-    Pendientes de revisión
+<div style="display:flex;align-items:center;gap:.6rem;margin:1.2rem 0 .6rem">
+    <span class="sec-label" style="margin-bottom:0">Pendientes de revisión</span>
     @if (pending.Any())
     {
-        <span class="chip chip-amber" style="font-size:.8rem;vertical-align:middle">@pending.Count</span>
+        <span class="chip chip-amber">@pending.Count</span>
     }
-</h2>
+</div>
 
-<div class="card" style="padding:0;overflow:hidden;margin-bottom:1.8rem">
+<div class="card" style="padding:0;overflow:hidden;margin-bottom:1.6rem">
     @if (!pending.Any())
     {
         <div class="empty-box" style="padding:1.4rem">
-            <p style="color:var(--text3);margin:0">Sin comprobantes pendientes.</p>
+            <p style="color:var(--text-3);margin:0">Sin comprobantes pendientes.</p>
         </div>
     }
     else
@@ -49,11 +49,11 @@
                     <tr>
                         <td>
                             <div style="font-weight:600;font-size:.85rem">@p.User.FullName</div>
-                            <div style="color:var(--text4);font-size:.74rem">@@@p.User.Username</div>
+                            <div style="color:var(--text-3);font-size:.74rem">@@@p.User.Username</div>
                         </td>
                         <td style="font-size:.84rem">
                             <div>@p.Stage.Name</div>
-                            <div style="color:var(--text4);font-size:.75rem">@p.Stage.Tournament?.Name</div>
+                            <div style="color:var(--text-3);font-size:.75rem">@p.Stage.Tournament?.Name</div>
                             @if (!string.IsNullOrEmpty(p.Stage.GroupKey))
                             {
                                 var fasesGrupo = p.Stage.Tournament?.Stages
@@ -67,8 +67,8 @@
                                 }
                             }
                         </td>
-                        <td style="font-weight:700">$@p.Amount</td>
-                        <td style="color:var(--text3);font-size:.8rem">@p.CreatedAt.ToString("dd/MM/yyyy HH:mm")</td>
+                        <td style="font-weight:700;color:var(--text-1)">$@p.Amount</td>
+                        <td style="color:var(--text-3);font-size:.8rem">@p.CreatedAt.ToString("dd/MM/yyyy HH:mm")</td>
                         <td>
                             @if (!string.IsNullOrEmpty(p.VoucherPath))
                             {
@@ -90,15 +90,14 @@
                                 <form asp-action="ApprovePayment" asp-route-id="@p.Id" method="post" style="display:inline">
                                     @Html.AntiForgeryToken()
                                     <button type="submit" class="btn btn-sm"
-                                            style="background:#22c55e;color:#fff;border:none">
+                                            style="background:var(--green);color:#fff;border:none;font-family:'Barlow Condensed',sans-serif;font-weight:700;text-transform:uppercase;letter-spacing:.06em">
                                         Aprobar
                                     </button>
                                 </form>
                                 <form asp-action="RejectPayment" asp-route-id="@p.Id" method="post" style="display:inline"
                                       onsubmit="return confirm('¿Rechazar el comprobante de @p.User.FullName?')">
                                     @Html.AntiForgeryToken()
-                                    <button type="submit" class="btn btn-sm"
-                                            style="background:#ef4444;color:#fff;border:none">
+                                    <button type="submit" class="btn btn-danger btn-sm">
                                         Rechazar
                                     </button>
                                 </form>
@@ -113,13 +112,15 @@
 </div>
 
 @* ── Aprobados ── *@
-<h2 style="margin:1.4rem 0 .6rem">Aprobados</h2>
+<div style="margin:1.2rem 0 .6rem">
+    <span class="sec-label" style="margin-bottom:0">Aprobados</span>
+</div>
 
 <div class="card" style="padding:0;overflow:hidden">
     @if (!approved.Any())
     {
         <div class="empty-box" style="padding:1.4rem">
-            <p style="color:var(--text3);margin:0">Sin comprobantes aprobados.</p>
+            <p style="color:var(--text-3);margin:0">Sin comprobantes aprobados.</p>
         </div>
     }
     else
@@ -142,15 +143,15 @@
                     <tr>
                         <td>
                             <div style="font-weight:600;font-size:.85rem">@p.User.FullName</div>
-                            <div style="color:var(--text4);font-size:.74rem">@@@p.User.Username</div>
+                            <div style="color:var(--text-3);font-size:.74rem">@@@p.User.Username</div>
                         </td>
                         <td style="font-size:.84rem">
                             <div>@p.Stage.Name</div>
-                            <div style="color:var(--text4);font-size:.75rem">@p.Stage.Tournament?.Name</div>
+                            <div style="color:var(--text-3);font-size:.75rem">@p.Stage.Tournament?.Name</div>
                         </td>
-                        <td style="font-weight:700">$@p.Amount</td>
-                        <td style="color:var(--text3);font-size:.8rem">@p.CreatedAt.ToString("dd/MM/yyyy HH:mm")</td>
-                        <td style="color:var(--text3);font-size:.82rem">@(p.Notes ?? "—")</td>
+                        <td style="font-weight:700;color:var(--text-1)">$@p.Amount</td>
+                        <td style="color:var(--text-3);font-size:.8rem">@p.CreatedAt.ToString("dd/MM/yyyy HH:mm")</td>
+                        <td style="color:var(--text-3);font-size:.82rem">@(p.Notes ?? "—")</td>
                         <td>
                             @if (!string.IsNullOrEmpty(p.VoucherPath))
                             {

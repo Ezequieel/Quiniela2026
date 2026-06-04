@@ -2,7 +2,7 @@
 @{ ViewData["Title"] = "Iniciar sesión"; Layout = "~/Views/Shared/_Layout.cshtml"; }
 
 <div class="auth-wrap">
-  <!-- Panel izquierdo -->
+  <!-- Panel izquierdo — fondo negro con patrón de cancha -->
   <div class="auth-left">
     <div class="auth-left-bg">2026</div>
     <div class="auth-left-content">
@@ -16,8 +16,8 @@
       <p class="auth-left-sub">USA · Canada · Mexico — 11 Jun · 19 Jul</p>
       <div class="auth-left-features">
         <div class="auth-feature">Predice resultados en tiempo real</div>
-        <div class="auth-feature">Compite con toda la operacion</div>
-        <div class="auth-feature">Sigue la clasificacion en vivo</div>
+        <div class="auth-feature">Compite con toda la operación</div>
+        <div class="auth-feature">Sigue la clasificación en vivo</div>
       </div>
     </div>
   </div>
@@ -25,7 +25,7 @@
   <!-- Panel derecho -->
   <div class="auth-right">
     <div class="auth-form-wrap">
-      <div class="auth-form-title">Iniciar sesion</div>
+      <div class="auth-form-title">Iniciar sesión</div>
       <p class="auth-form-sub">Ingresa tus credenciales</p>
 
       <form asp-action="Login" method="post">
@@ -33,13 +33,13 @@
         <div asp-validation-summary="All" class="val-summary"></div>
 
         <div class="field">
-          <label asp-for="Email">Correo electronico</label>
+          <label asp-for="Email">Correo electrónico</label>
           <input asp-for="Email" class="input"
                  placeholder="correo@empresa.com" autocomplete="email" />
           <span asp-validation-for="Email" class="field-err"></span>
         </div>
         <div class="field">
-          <label asp-for="Password">Contrasena</label>
+          <label asp-for="Password">Contraseña</label>
           <input asp-for="Password" class="input" type="password"
                  placeholder="••••••••" autocomplete="current-password" />
           <span asp-validation-for="Password" class="field-err"></span>
@@ -47,7 +47,7 @@
 
         <button type="submit" class="btn btn-primary btn-full btn-lg"
                 style="margin-top:.6rem">
-          Iniciar sesion
+          Iniciar sesión
         </button>
       </form>
 

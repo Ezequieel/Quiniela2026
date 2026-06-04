@@ -18,7 +18,7 @@ else
             <a asp-controller="Tournament" asp-action="Index" class="breadcrumb">← Torneos</a>
             <h1>@Model.TournamentName</h1>
         </div>
-@if (ViewBag.LogVisible == true)
+        @if (ViewBag.LogVisible == true)
         {
             <a asp-controller="History" asp-action="Log" asp-route-tournamentId="@Model.TournamentId"
                class="btn btn-outline btn-sm">Registro de predicciones</a>
@@ -81,7 +81,7 @@ else
                     <tr class="@(r.IsCurrentUser ? "lb-me" : "") @(r.Rank == 1 ? "lb-top1" : r.Rank == 2 ? "lb-top2" : r.Rank == 3 ? "lb-top3" : "")">
                         <td class="lb-rank">
                             @if (r.Rank <= 3) { <span>@r.Medal</span> }
-                            else { <span style="color:#999">@r.Rank</span> }
+                            else { <span style="color:var(--text-3)">@r.Rank</span> }
                         </td>
                         <td>
                             <div class="lb-user">
@@ -91,7 +91,7 @@ else
                                         @r.FullName
                                         @if (r.IsCurrentUser)
                                         {
-                                            <span style="color:#D42B2B;font-size:.72rem;font-weight:700;margin-left:.3rem">(tú)</span>
+                                            <span style="color:var(--rojo);font-size:.72rem;font-weight:700;margin-left:.3rem">(tú)</span>
                                         }
                                     </div>
                                     <div class="lb-handle">@@@r.Username</div>

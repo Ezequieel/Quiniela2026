@@ -14,6 +14,8 @@
         <input type="hidden" asp-for="TournamentId" />
         <div asp-validation-summary="All" class="val-summary"></div>
 
+        <div class="section-title">Información de la fase</div>
+
         <div class="field">
             <label asp-for="Name">Nombre de la fase</label>
             <input asp-for="Name" class="input" placeholder="Jornada 12 / Cuartos de final" />
@@ -36,7 +38,7 @@
             <div class="field">
                 <label asp-for="OrderNum">Orden</label>
                 <input asp-for="OrderNum" class="input" type="number" min="1" />
-                <span class="hint">Posición dentro del torneo</span>
+                <span class="field-hint">Posición dentro del torneo</span>
             </div>
         </div>
 
@@ -52,10 +54,13 @@
             else
             {
                 <input asp-for="ApiRound" class="input" placeholder="Regular Season - 38" />
-                <span class="hint">Para Mundial: Group Stage - A, Round of 16, Quarter-finals...</span>
+                <span class="field-hint">Para Mundial: Group Stage - A, Round of 16, Quarter-finals...</span>
             }
             <span asp-validation-for="ApiRound" class="field-err"></span>
         </div>
+
+        <div class="divider"></div>
+        <div class="section-title">Cuota y plazos</div>
 
         <div class="fields-row">
             <div class="field">
@@ -64,7 +69,7 @@
                 <span asp-validation-for="EntryFee" class="field-err"></span>
             </div>
             <div class="field">
-                <label asp-for="PredictionDeadline">Cierre de predicciones <span class="hint">Hora de El Salvador (UTC-6)</span></label>
+                <label asp-for="PredictionDeadline">Cierre de predicciones <span class="hint">Hora SV (UTC-6)</span></label>
                 <input asp-for="PredictionDeadline" class="input" type="datetime-local"
                        value="@Model.PredictionDeadline.ToString("yyyy-MM-ddTHH:mm")" />
                 <span asp-validation-for="PredictionDeadline" class="field-err"></span>
@@ -74,10 +79,13 @@
         <div class="field">
             <label asp-for="GroupKey">
                 Clave de grupo de pago
-                <span class="hint">Opcional — fases con la misma clave comparten un solo pago. Ej: "grupos" para las 3 jornadas de grupos</span>
+                <span class="hint">Opcional — fases con la misma clave comparten un solo pago</span>
             </label>
             <input asp-for="GroupKey" class="input" placeholder="ej: grupos, eliminatorias" />
         </div>
+
+        <div class="divider"></div>
+        <div class="section-title">Banner</div>
 
         <div class="field">
             <label asp-for="BannerFile">
@@ -97,7 +105,10 @@
             Los partidos se cargarán automáticamente desde API-Football al crear la fase.
         </div>
 
-        <button type="submit" class="btn btn-primary">Crear fase y cargar partidos</button>
+        <div style="display:flex;gap:.5rem">
+            <button type="submit" class="btn btn-primary">Crear fase y cargar partidos</button>
+            <a href="/Admin/Index" class="btn btn-secondary">Cancelar</a>
+        </div>
     </form>
 </div>
 

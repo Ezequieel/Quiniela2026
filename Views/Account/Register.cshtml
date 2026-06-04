@@ -2,7 +2,7 @@
 @{ ViewData["Title"] = "Crear cuenta"; Layout = "~/Views/Shared/_Layout.cshtml"; }
 
 <div class="auth-wrap">
-  <!-- Panel izquierdo -->
+  <!-- Panel izquierdo — fondo negro con patrón de cancha -->
   <div class="auth-left">
     <div class="auth-left-bg">2026</div>
     <div class="auth-left-content">
@@ -11,13 +11,13 @@
         FIFA World Cup 2026
       </div>
       <div class="auth-left-title">
-        Unete<span>a la quiniela</span>
+        Únete<span>a la quiniela</span>
       </div>
-      <p class="auth-left-sub">Registro unico de $20 — todo va al premio</p>
+      <p class="auth-left-sub">Registro único — todo va al premio</p>
       <div class="auth-left-features">
-        <div class="auth-feature">Pago unico de $20 para participar</div>
+        <div class="auth-feature">Pago único para participar</div>
         <div class="auth-feature">Predice desde la primera fecha</div>
-        <div class="auth-feature">Clasificacion en tiempo real</div>
+        <div class="auth-feature">Clasificación en tiempo real</div>
       </div>
     </div>
   </div>
@@ -26,7 +26,7 @@
   <div class="auth-right">
     <div class="auth-form-wrap">
       <div class="auth-form-title">Crear cuenta</div>
-      <p class="auth-form-sub">Registro unico de $20 — todo va al premio</p>
+      <p class="auth-form-sub">Registro de participante</p>
 
       <form asp-action="Register" method="post">
         @Html.AntiForgeryToken()
@@ -45,13 +45,13 @@
           <span asp-validation-for="Username" class="field-err"></span>
         </div>
         <div class="field">
-          <label asp-for="Email">Correo electronico</label>
+          <label asp-for="Email">Correo electrónico</label>
           <input asp-for="Email" class="input"
                  placeholder="correo@empresa.com" autocomplete="email" />
           <span asp-validation-for="Email" class="field-err"></span>
         </div>
         <div class="field">
-          <label asp-for="Password">Contrasena</label>
+          <label asp-for="Password">Contraseña</label>
           <input asp-for="Password" class="input" type="password"
                  placeholder="••••••••" autocomplete="new-password" />
           <span asp-validation-for="Password" class="field-err"></span>
@@ -64,7 +64,7 @@
       </form>
 
       <p class="auth-link">
-        Ya tienes cuenta — <a asp-action="Login">Iniciar sesion</a>
+        Ya tienes cuenta — <a asp-action="Login">Iniciar sesión</a>
       </p>
     </div>
   </div>

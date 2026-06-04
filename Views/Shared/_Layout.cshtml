@@ -3,11 +3,12 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
-    <meta name="theme-color" content="#1A1A1A" />
+    <meta name="theme-color" content="#111111" />
     <title>@ViewData["Title"] — Quiniela Mundial</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;900&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Barlow+Condensed:wght@400;600;700;900&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
     <link rel="stylesheet" href="~/css/app.css" />
     <link rel="stylesheet" href="~/css/mundial.css" />
 </head>
@@ -15,49 +16,35 @@
 
 @if (ViewBag.HideNav != true)
 {
-    <nav class="navbar">
-        <div class="nav-inner">
-            <a class="nav-brand" asp-controller="Home" asp-action="Index">
+    <nav class="topbar">
+        <div class="topbar-inner">
+            <a class="topbar-brand" asp-controller="Home" asp-action="Index">
                 Quiniela Mundial
             </a>
             @if (User.Identity?.IsAuthenticated == true)
             {
-                <div class="nav-links">
-                    <a asp-controller="Tournament" asp-action="Index">Torneos</a>
+                <div class="topbar-nav">
+                    <a asp-controller="Tournament" asp-action="Index" class="topbar-link">Torneos</a>
                     @if (User.IsInRole("Admin"))
                     {
-                        <a href="/Admin/Index" class="nav-admin">Admin</a>
+                        <a href="/Admin/Index" class="topbar-admin">Admin</a>
                     }
-                    <span class="nav-user">@User.FindFirst(System.Security.Claims.ClaimTypes.GivenName)?.Value</span>
+                    <span class="topbar-user">@User.FindFirst(System.Security.Claims.ClaimTypes.GivenName)?.Value</span>
                     <form asp-controller="Account" asp-action="Logout" method="post" style="display:inline">
                         @Html.AntiForgeryToken()
-                        <button type="submit" class="btn-nav-exit">Salir</button>
+                        <button type="submit" class="topbar-exit">Salir</button>
                     </form>
                 </div>
             }
             else
             {
-                <div class="nav-links">
-                    <a asp-controller="Account" asp-action="Login">Iniciar sesión</a>
+                <div class="topbar-nav">
+                    <a asp-controller="Account" asp-action="Login" class="topbar-link">Iniciar sesión</a>
                     <a asp-controller="Account" asp-action="Register" class="btn btn-primary btn-sm">Registrarse</a>
                 </div>
             }
         </div>
     </nav>
-
-    @if (User.Identity?.IsAuthenticated == true)
-    {
-        <div class="ep-ticker">
-            <span class="ep-ticker-label">Mundial 2026</span>
-            <div class="ep-ticker-items">
-                <span class="ep-ticker-item">11 Jun — Arranque fase de grupos</span>
-                <span class="ep-ticker-sep">·</span>
-                <span class="ep-ticker-item">48 selecciones · 104 partidos · 16 estadios</span>
-                <span class="ep-ticker-sep">·</span>
-                <span class="ep-ticker-item">Final: 19 Jul 2026, Nueva York/Nueva Jersey</span>
-            </div>
-        </div>
-    }
 }
 
 <main class="@(ViewBag.FullWidth == true ? "app-main-full" : "app-main")">
@@ -79,7 +66,7 @@
 @if (ViewBag.HideFooter != true)
 {
     <footer class="app-footer">
-        <p>QUINIELA MUNDIAL &mdash; @DateTime.Now.Year</p>
+        <p>QUINIELA MUNDIAL &mdash; @DateTime.Now.Year &mdash; USA · Canadá · México</p>
     </footer>
 }
 
