@@ -14,7 +14,7 @@ namespace QuinielaApp.BackgroundServices
         private readonly IServiceProvider _services;
         private readonly ILogger<ScoreSyncBackgroundService> _log;
 
-        private static readonly TimeSpan ActiveInterval = TimeSpan.FromSeconds(15);
+        private static readonly TimeSpan ActiveInterval = TimeSpan.FromSeconds(30);
         private static readonly TimeSpan IdleInterval   = TimeSpan.FromSeconds(20);
 
         public ScoreSyncBackgroundService(IServiceProvider services, ILogger<ScoreSyncBackgroundService> log)

@@ -365,4 +365,17 @@ namespace QuinielaApp.ViewModels
         public string Label    { get; set; } = string.Empty;
     }
 
+    // ── Admin: historial de usuarios ──────────────────────
+    public class UsuarioAdminVm
+    {
+        public int      Id        { get; set; }
+        public string   FullName  { get; set; } = string.Empty;
+        public string   Username  { get; set; } = string.Empty;
+        public string   Email     { get; set; } = string.Empty;
+        public string   Role      { get; set; } = string.Empty;
+        public DateTime CreatedAt { get; set; }
+        public int      Torneos   { get; set; }
+        public decimal  PagoTotal { get; set; }
+    }
+
 }

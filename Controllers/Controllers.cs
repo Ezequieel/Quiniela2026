@@ -956,6 +956,37 @@ namespace QuinielaApp.Controllers
             return RedirectToAction("Index");
         }
 
+        // ── Historial de usuarios ─────────────────────────
+        [HttpGet]
+        public async Task<IActionResult> Usuarios()
+        {
+            var usuarios = await _db.Users
+                .OrderByDescending(u => u.CreatedAt)
+                .Select(u => new UsuarioAdminVm
+                {
+                    Id        = u.Id,
+                    FullName  = u.FullName,
+                    Username  = u.Username,
+                    Email     = u.Email,
+                    Role      = u.Role,
+                    CreatedAt = u.CreatedAt,
+                    Torneos   = _db.TournamentEntries
+                                    .Count(te => te.UserId == u.Id),
+                    PagoTotal = _db.Payments
+                                    .Where(p => p.UserId == u.Id
+                                        && p.Status == PaymentStatus.Approved)
+                                    .Sum(p => (decimal?)p.Amount) ?? 0
+                })
+                .ToListAsync();
+
+            ViewBag.Total   = usuarios.Count;
+            ViewBag.Players = usuarios.Count(u => u.Role == "Player");
+            ViewBag.Admins  = usuarios.Count(u => u.Role == "Admin");
+            ViewBag.Bolsa   = usuarios.Sum(u => u.PagoTotal);
+
+            return View(usuarios);
+        }
+
         // ── Helper guardar archivo ────────────────────────
         private async Task<string> SaveFileAsync(IFormFile file, string folder)
         {
