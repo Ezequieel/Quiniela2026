@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("QuinielaApp")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+99b48aa56e8f7745966eade26fe96273381f869d")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+26000681056d17abbcccbb5ce058fc1acf5bbf37")]
 [assembly: System.Reflection.AssemblyProductAttribute("QuinielaApp")]
 [assembly: System.Reflection.AssemblyTitleAttribute("QuinielaApp")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
