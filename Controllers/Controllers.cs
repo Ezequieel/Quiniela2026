@@ -119,6 +119,16 @@ namespace QuinielaApp.Controllers
                         p.Stage.TournamentId == t.Id &&
                         p.Status == PaymentStatus.Approved);
 
+                var bolsaTotal = await _db.Payments
+                    .Include(p => p.Stage)
+                    .Where(p => p.Stage.TournamentId == t.Id
+                             && p.Status == PaymentStatus.Approved)
+                    .SumAsync(p => (decimal?)p.Amount) ?? 0;
+                card.BolsaTotal = bolsaTotal;
+                card.Premio1    = Math.Round(bolsaTotal * 0.60m, 2);
+                card.Premio2    = Math.Round(bolsaTotal * 0.30m, 2);
+                card.Premio3    = Math.Round(bolsaTotal * 0.10m, 2);
+
                 // Determinar líder de cada grupo de pago
                 var groupLeaders = new HashSet<int>();
                 foreach (var g in t.Stages

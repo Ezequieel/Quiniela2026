@@ -119,6 +119,45 @@
             </div>
         </div>
 
+        @if (t.BolsaTotal > 0)
+        {
+            <div class="bolsa-widget">
+                <div class="bolsa-header">
+                    <div class="bolsa-title-wrap">
+                        <span class="bolsa-title">Bolsa acumulada</span>
+                    </div>
+                    <span class="bolsa-total">
+                        $@t.BolsaTotal.ToString("N2")
+                    </span>
+                </div>
+                <div class="bolsa-prizes">
+                    <div class="bolsa-prize bolsa-prize-1">
+                        <span class="bolsa-prize-place">1er lugar</span>
+                        <span class="bolsa-prize-amount">
+                            $@t.Premio1.ToString("N2")
+                        </span>
+                        <span class="bolsa-prize-pct">60%</span>
+                    </div>
+                    <div class="bolsa-sep"></div>
+                    <div class="bolsa-prize bolsa-prize-2">
+                        <span class="bolsa-prize-place">2do lugar</span>
+                        <span class="bolsa-prize-amount">
+                            $@t.Premio2.ToString("N2")
+                        </span>
+                        <span class="bolsa-prize-pct">30%</span>
+                    </div>
+                    <div class="bolsa-sep"></div>
+                    <div class="bolsa-prize bolsa-prize-3">
+                        <span class="bolsa-prize-place">3er lugar</span>
+                        <span class="bolsa-prize-amount">
+                            $@t.Premio3.ToString("N2")
+                        </span>
+                        <span class="bolsa-prize-pct">10%</span>
+                    </div>
+                </div>
+            </div>
+        }
+
         @if (!t.Stages.Any())
         {
             <p class="text-muted" style="padding:1.1rem 1.3rem;font-size:.83rem">

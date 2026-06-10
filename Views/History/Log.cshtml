@@ -134,7 +134,7 @@
                                 <span>@r.AwayTeam</span>
                                 <img src="@r.AwayTeamLogo" class="log-logo" onerror="this.style.display='none'" />
                             </div>
-                            <div class="log-match-date">@TimeHelper.Format(r.MatchDate, "dd/MM HH:mm")</div>
+                            <div class="log-match-date">@r.MatchDate.ToString("dd/MM HH:mm")</div>
                         </td>
 
                         <td class="log-stage">@r.StageName</td>

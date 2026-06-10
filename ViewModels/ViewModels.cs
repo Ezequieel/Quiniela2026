@@ -47,6 +47,10 @@ namespace QuinielaApp.ViewModels
         public bool    IsJoined     { get; set; }
         public int     MyTotalPoints{ get; set; }
         public int     ApiLeagueId  { get; set; }
+        public decimal BolsaTotal   { get; set; }
+        public decimal Premio1      { get; set; }
+        public decimal Premio2      { get; set; }
+        public decimal Premio3      { get; set; }
         public List<StageCardVm> Stages { get; set; } = new();
     }
 

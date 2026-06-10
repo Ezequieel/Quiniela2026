@@ -569,6 +569,77 @@ textarea.input, textarea.form-control { resize: vertical; min-height: 90px; }
   padding: 8px 12px; display: flex; gap: .5rem; flex-wrap: wrap;
 }
 
+/* ── Bolsa acumulada ── */
+.bolsa-widget {
+    padding: 12px 16px;
+    background: var(--surf2);
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+}
+.bolsa-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 10px;
+}
+.bolsa-title {
+    font-size: .72rem;
+    font-weight: 700;
+    color: var(--text-3);
+    text-transform: uppercase;
+    letter-spacing: .8px;
+}
+.bolsa-total {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 1.4rem;
+    font-weight: 900;
+    color: var(--rojo);
+    letter-spacing: -1px;
+}
+.bolsa-prizes {
+    display: flex;
+    align-items: center;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    overflow: hidden;
+    background: var(--surface);
+}
+.bolsa-sep {
+    width: 1px;
+    height: 40px;
+    background: var(--border);
+    flex-shrink: 0;
+}
+.bolsa-prize {
+    flex: 1;
+    text-align: center;
+    padding: 7px 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+.bolsa-prize-place {
+    font-size: .65rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .5px;
+    color: var(--text-3);
+}
+.bolsa-prize-amount {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: .95rem;
+    font-weight: 900;
+    line-height: 1;
+}
+.bolsa-prize-pct {
+    font-size: .62rem;
+    font-weight: 600;
+    color: var(--text-3);
+}
+.bolsa-prize-1 .bolsa-prize-amount { color: var(--amarillo); }
+.bolsa-prize-2 .bolsa-prize-amount { color: var(--text-2); }
+.bolsa-prize-3 .bolsa-prize-amount { color: #B8732E; }
+
 /* ── Stage cards (compat) ── */
 .stages-grid {
   display: grid; grid-template-columns: repeat(auto-fill, minmax(240px,1fr));
