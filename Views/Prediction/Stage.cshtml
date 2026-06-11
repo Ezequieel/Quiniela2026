@@ -90,7 +90,7 @@ else
         <div class="match-datetime">
             <div class="match-time-main">
                 <span class="match-time-sv-big">
-                    @m.MatchDate.ToString("HH:mm")
+                    @m.MatchDateSv.ToString("HH:mm")
                 </span>
                 <span class="match-tz-sv">SV</span>
             </div>
@@ -115,7 +115,7 @@ else
                     else
                     {
                         <span class="match-deadline-normal">
-                            Cierra @deadline.ToString("HH:mm")
+                            Cierra @m.MatchDateSv.AddMinutes(-15).ToString("HH:mm")
                             <span class="match-tz-small">SV</span>
                         </span>
                     }
