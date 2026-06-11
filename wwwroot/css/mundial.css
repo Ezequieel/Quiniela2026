@@ -149,6 +149,23 @@
   text-transform: uppercase; letter-spacing: .1em; margin-top: 4px;
 }
 
+/* ── Mensaje de Mundial en vivo ── */
+.wc-live-message {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 2rem;
+    font-weight: 900;
+    color: #C8001E;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    text-align: center;
+    padding: 1rem 0;
+    animation: blink-red 1s ease-in-out infinite alternate;
+}
+@keyframes blink-red {
+    from { opacity: 1; }
+    to   { opacity: .5; }
+}
+
 /* ── Stats del Mundial ── */
 .wc-hero-stats {
   display: flex; justify-content: center; flex-wrap: wrap;

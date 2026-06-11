@@ -690,14 +690,84 @@ textarea.input, textarea.form-control { resize: vertical; min-height: 90px; }
 /* ═══════════════════════════════════════
    MATCH CARDS & PREDICCIONES
 ═══════════════════════════════════════ */
-.match-datetime { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; flex-wrap: wrap; gap: 4px; }
-.match-date-sv { font-family: 'Barlow Condensed', sans-serif; font-size: 12px; font-weight: 700; color: var(--text-2); text-transform: uppercase; letter-spacing: .06em; }
-.match-tz { font-size: 9px; font-weight: 900; color: var(--text-3); background: var(--surf2); padding: 1px 5px; border-radius: 2px; margin-left: 5px; vertical-align: middle; letter-spacing: .08em; }
-.match-deadline-badge { font-family: 'Barlow Condensed', sans-serif; font-size: 10px; font-weight: 700; color: var(--text-2); text-transform: uppercase; letter-spacing: .06em; }
-.match-deadline-urgent { color: var(--rojo); font-weight: 900; animation: blink .8s ease-in-out infinite alternate; }
-.match-closed-badge { font-family: 'Barlow Condensed', sans-serif; font-size: 10px; font-weight: 700; background: var(--surf2); color: var(--text-3); padding: 2px 7px; border-radius: 2px; text-transform: uppercase; letter-spacing: .06em; }
 .match-pred-card.pred-closed .pred-btn { opacity: .45; cursor: default; pointer-events: none; }
 .match-pred-card.pred-closed .score-inp { background: var(--surf2); pointer-events: none; color: var(--text-3); }
+
+.match-datetime {
+    margin-bottom: 6px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+}
+.match-time-main {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+/* Hora SV — protagonista */
+.match-time-sv-big {
+    font-size: .82rem;
+    font-weight: 700;
+    color: #555;
+    line-height: 1;
+}
+.match-tz-sv {
+    font-size: .6rem;
+    font-weight: 700;
+    background: #555;
+    color: #fff;
+    padding: 1px 5px;
+    border-radius: 2px;
+    letter-spacing: .05em;
+    text-transform: uppercase;
+}
+/* Hora UTC — referencia secundaria */
+.match-time-utc-small {
+    font-size: .72rem;
+    color: #999;
+    font-weight: 500;
+}
+/* Info de cierre */
+.match-deadline-info {
+    font-size: .72rem;
+    color: #555;
+    font-weight: 600;
+    text-align: center;
+}
+.match-deadline-normal {
+    font-size: .68rem;
+    color: #888;
+    font-weight: 500;
+}
+.match-tz-small {
+    font-size: .6rem;
+    font-weight: 800;
+    background: #555;
+    color: #fff;
+    padding: 1px 4px;
+    border-radius: 2px;
+}
+.match-deadline-utc {
+    color: #aaa;
+    font-weight: 400;
+    font-size: .68rem;
+}
+.match-deadline-urgent {
+    font-size: .72rem;
+    color: #C8001E;
+    font-weight: 700;
+}
+.match-closed-badge {
+    font-size: .65rem;
+    font-weight: 600;
+    background: #EDE8DF;
+    color: #888;
+    padding: 2px 7px;
+    border-radius: 2px;
+    text-transform: uppercase;
+    letter-spacing: .06em;
+}
 
 .matches-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px,1fr)); gap: 10px; }
 .match-pred-card {

@@ -70,7 +70,7 @@ namespace QuinielaApp.Services
             AwayTeam     = f.Teams.Away.Name,
             HomeTeamLogo = f.Teams.Home.Logo,
             AwayTeamLogo = f.Teams.Away.Logo,
-            MatchDate    = f.Fixture.Date,
+            MatchDate    = f.Fixture.Date.UtcDateTime,
             Status       = f.Fixture.Status.Short
         };
 
@@ -134,8 +134,8 @@ namespace QuinielaApp.Services
 
     public class ApiFixtureInfo
     {
-        [JsonPropertyName("id")]     public int        Id     { get; set; }
-        [JsonPropertyName("date")]   public DateTime   Date   { get; set; }
+        [JsonPropertyName("id")]     public int            Id     { get; set; }
+        [JsonPropertyName("date")]   public DateTimeOffset Date   { get; set; }
         [JsonPropertyName("venue")]  public ApiVenue?  Venue  { get; set; }
         [JsonPropertyName("status")] public ApiStatus  Status { get; set; } = null!;
     }

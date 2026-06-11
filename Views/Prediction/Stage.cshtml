@@ -84,37 +84,47 @@ else
 <div class="matches-grid">
 @foreach (var m in Model.Matches)
 {
-    var minsLeft = (int)(TimeHelper.ToUtc(m.MatchDeadline) - DateTime.UtcNow).TotalMinutes;
-    var dlSv     = m.MatchDeadline;
     <div class="match-pred-card @(isMundial ? "wc-theme" : "") @(m.IsLive ? "is-live" : m.IsFinished ? "is-done" : "") @(!m.CanPredict && !m.IsFinished && !m.IsLive ? "pred-closed" : "")"
          id="mc-@m.Id">
 
         <div class="match-datetime">
-            <span class="match-date-sv">
-                @m.MatchDateSv.ToString("dd MMM") · @m.MatchDateSv.ToString("HH:mm")<span class="match-tz">SV</span>
-            </span>
-            @if (!m.IsFinished && !m.IsLive)
+            <div class="match-time-main">
+                <span class="match-time-sv-big">
+                    @m.MatchDate.ToString("HH:mm")
+                </span>
+                <span class="match-tz-sv">SV</span>
+            </div>
+
+            @{
+                var deadline = m.MatchDate.AddMinutes(-15);
+                var abierto  = DateTime.UtcNow < deadline;
+                var minsLeft = (int)(deadline - DateTime.UtcNow).TotalMinutes;
+            }
+
+            @if (m.Status != "FT" && m.Status != "1H" &&
+                 m.Status != "HT" && m.Status != "2H")
             {
-                if (m.CanPredict)
+                if (abierto)
                 {
-                    <span class="match-deadline-badge">
-                        @if (minsLeft <= 60)
-                        {
-                            <span class="match-deadline-urgent">Cierra en @minsLeft min</span>
-                        }
-                        else if (minsLeft <= 1440)
-                        {
-                            <span>Cierra @dlSv.ToString("HH:mm")</span>
-                        }
-                        else
-                        {
-                            <span>Cierra @dlSv.ToString("dd MMM HH:mm")</span>
-                        }
-                    </span>
+                    if (minsLeft <= 60)
+                    {
+                        <span class="match-deadline-urgent">
+                            Cierra en @minsLeft min
+                        </span>
+                    }
+                    else
+                    {
+                        <span class="match-deadline-normal">
+                            Cierra @deadline.ToString("HH:mm")
+                            <span class="match-tz-small">SV</span>
+                        </span>
+                    }
                 }
                 else
                 {
-                    <span class="match-closed-badge">Predicciones cerradas</span>
+                    <span class="match-closed-badge">
+                        Predicciones cerradas
+                    </span>
                 }
             }
         </div>

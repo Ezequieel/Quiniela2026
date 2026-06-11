@@ -32,8 +32,8 @@ namespace QuinielaApp.Services
             var match = await _db.Matches.Include(m => m.Stage)
                 .FirstOrDefaultAsync(m => m.Id == matchId);
             if (match == null) return (false, "Partido no encontrado.");
-            // MatchDate viene de la API en hora local SV, no en UTC real
-            var matchDeadlineUtc = TimeHelper.ToUtc(match.MatchDate).AddMinutes(-15);
+            // MatchDate ya viene en UTC real (ver ApiFootballService.MapToMatch)
+            var matchDeadlineUtc = match.MatchDate.AddMinutes(-15);
             if (DateTime.UtcNow >= matchDeadlineUtc)
                 return (false, "Las predicciones para este partido cerraron.");
             if (match.Status == "FT")

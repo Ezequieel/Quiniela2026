@@ -169,9 +169,8 @@ namespace QuinielaApp.Controllers
                         .ToListAsync();
                     var matchCount     = stageMatches.Count;
                     var nowStage       = DateTime.UtcNow;
-                    // MatchDate de la API está en hora SV local — convertir a UTC real antes de comparar
-                    var openMatches    = stageMatches.Count(m => m.Status == "NS" && nowStage < TimeHelper.ToUtc(m.MatchDate).AddMinutes(-15));
-                    var closedMatches  = stageMatches.Count(m => m.Status == "NS" && nowStage >= TimeHelper.ToUtc(m.MatchDate).AddMinutes(-15));
+                    var openMatches    = stageMatches.Count(m => m.Status == "NS" && nowStage < m.MatchDate.AddMinutes(-15));
+                    var closedMatches  = stageMatches.Count(m => m.Status == "NS" && nowStage >= m.MatchDate.AddMinutes(-15));
                     var hasPending = !paid && await _paymentSvc.UserHasPendingPaymentAsync(uid, s.Id);
 
                     var hasGroupApproved = !string.IsNullOrEmpty(s.GroupKey) && groupApprovedKeys.Contains(s.GroupKey!);
@@ -340,10 +339,8 @@ namespace QuinielaApp.Controllers
             var now   = DateTime.UtcNow;
             var cards = matches.Select(m => {
                 var pred        = m.Predictions.FirstOrDefault();
-                // MatchDate viene de la API en hora SV local (no es UTC real)
-                // Para comparar con DateTime.UtcNow hay que convertirlo primero
-                var matchDl     = m.MatchDate.AddMinutes(-15);          // deadline en hora SV local
-                var matchDlUtc  = TimeHelper.ToUtc(matchDl);            // deadline en UTC real
+                // MatchDate ya viene en UTC real (ver ApiFootballService.MapToMatch)
+                var matchDlUtc  = m.MatchDate.AddMinutes(-15);
                 var canPredThis = now < matchDlUtc;
                 return new MatchPredVm
                 {
@@ -351,8 +348,8 @@ namespace QuinielaApp.Controllers
                     HomeTeam      = m.HomeTeam, AwayTeam = m.AwayTeam,
                     HomeTeamLogo  = m.HomeTeamLogo, AwayTeamLogo = m.AwayTeamLogo,
                     MatchDate     = m.MatchDate,
-                    MatchDeadline = matchDl,       // SV local — para mostrar la hora de cierre
-                    MatchDateSv   = m.MatchDate,   // ya está en hora SV, sin conversión adicional
+                    MatchDeadline = matchDlUtc,
+                    MatchDateSv   = TimeHelper.ToSvTime(m.MatchDate),
                     CanPredict    = canPredThis,
                     HomeScore = m.HomeScore, AwayScore = m.AwayScore,
                     Status = m.Status, Elapsed = m.Elapsed,
@@ -427,7 +424,7 @@ namespace QuinielaApp.Controllers
             var match = await _db.Matches.Include(m => m.Stage)
                 .FirstOrDefaultAsync(m => m.Id == dto.MatchId);
             if (match == null) return Json(new { ok = false, msg = "Partido no encontrado." });
-            if (DateTime.UtcNow >= TimeHelper.ToUtc(match.MatchDate).AddMinutes(-15))
+            if (DateTime.UtcNow >= match.MatchDate.AddMinutes(-15))
                 return Json(new { ok = false, msg = "Las predicciones para este partido cerraron." });
 
             // Verificar que el usuario está inscrito

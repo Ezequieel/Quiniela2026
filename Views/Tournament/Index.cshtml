@@ -26,6 +26,9 @@
             <div class="wc-cd-unit"><span class="wc-cd-num" id="cd-m">--</span><span class="wc-cd-lbl">Min</span></div>
             <div class="wc-cd-unit"><span class="wc-cd-num" id="cd-s">--</span><span class="wc-cd-lbl">Seg</span></div>
         </div>
+        <div id="wc-live-msg" style="display:none" class="wc-live-message">
+            EL MUNDIAL HA COMENZADO
+        </div>
 
         <div class="wc-hero-stats">
             <div class="wc-hero-stat">
@@ -311,9 +314,9 @@
 @section Scripts {
 <script>
 const wcStart = new Date('2026-06-11T17:00:00Z');
+const wcTimer = setInterval(updateCountdown, 1000);
 function updateCountdown() {
     const diff = wcStart - Date.now();
-    if (diff <= 0) { document.getElementById('wc-countdown')?.remove(); return; }
     const d = Math.floor(diff / 86400000);
     const h = Math.floor((diff % 86400000) / 3600000);
     const m = Math.floor((diff % 3600000) / 60000);
@@ -321,8 +324,13 @@ function updateCountdown() {
     const pad = n => String(n).padStart(2,'0');
     const el = (id, val) => { const e = document.getElementById(id); if(e) e.textContent = pad(val); };
     el('cd-d', d); el('cd-h', h); el('cd-m', m); el('cd-s', s);
+
+    if (d <= 0 && h <= 0 && m <= 0 && s <= 0) {
+        clearInterval(wcTimer);
+        document.getElementById('wc-countdown').style.display = 'none';
+        document.getElementById('wc-live-msg').style.display = 'block';
+    }
 }
 updateCountdown();
-setInterval(updateCountdown, 1000);
 </script>
 }
