@@ -104,6 +104,20 @@ namespace QuinielaApp.Services
                 .Select(s => s.Id)
                 .ToListAsync();
 
+            // Resetear predicciones de los partidos a recalcular para que cada
+            // corrida parta de cero y no se acumulen puntos entre llamadas.
+            var matchIds = finishedMatches.Select(m => m.Id).ToList();
+            var predsToReset = await _db.Predictions
+                .Where(p => matchIds.Contains(p.MatchId))
+                .ToListAsync();
+            foreach (var pred in predsToReset)
+            {
+                pred.PointsEarned  = 0;
+                pred.ResultCorrect = null;
+                pred.ScoreCorrect  = null;
+            }
+            await _db.SaveChangesAsync();
+
             foreach (var uid in participants)
             {
                 int totalPts = 0, resultHits = 0, scoreHits = 0;
@@ -152,15 +166,17 @@ namespace QuinielaApp.Services
                 else
                     se.Points = totalPts;
 
-                // Recalcular total del torneo sumando todos los StageResults del usuario
+                // Recalcular total del torneo: otras fases (BD) + esta fase recién calculada.
+                // No se usa SumAsync sobre el StageResult de esta fase porque, si "sr" es
+                // nuevo, todavía no está persistido y no aparecería en la suma.
                 var te = await _db.TournamentEntries
                     .FirstOrDefaultAsync(e => e.UserId == uid && e.TournamentId == tournamentId);
                 if (te != null)
                 {
-                    var allPts = await _db.StageResults
-                        .Where(r => r.UserId == uid && allStageIds.Contains(r.StageId))
+                    var otherStagesPts = await _db.StageResults
+                        .Where(r => r.UserId == uid && r.StageId != stageId && allStageIds.Contains(r.StageId))
                         .SumAsync(r => (int?)r.Points) ?? 0;
-                    te.TotalPoints = allPts;
+                    te.TotalPoints = otherStagesPts + totalPts;
                 }
             }
 
@@ -189,6 +205,11 @@ namespace QuinielaApp.Services
             var participants = await _db.TournamentEntries
                 .Where(te => te.TournamentId == tournamentId)
                 .Select(te => te.UserId)
+                .ToListAsync();
+
+            var allStageIds = await _db.Stages
+                .Where(s => s.TournamentId == tournamentId)
+                .Select(s => s.Id)
                 .ToListAsync();
 
             foreach (var uid in participants)
@@ -236,10 +257,16 @@ int totalPts = 0, resultHits = 0, scoreHits = 0, total = 0;
                     sr.Points = totalPts; sr.ResultHits = resultHits; sr.ScoreHits = scoreHits;
                 }
 
-                // Actualizar puntos totales del torneo
+                // Recalcular total del torneo: otras fases (BD) + esta fase recién calculada.
                 var te = await _db.TournamentEntries.FirstOrDefaultAsync(e =>
                     e.UserId == uid && e.TournamentId == tournamentId);
-                if (te != null) te.TotalPoints += totalPts;
+                if (te != null)
+                {
+                    var otherStagesPts = await _db.StageResults
+                        .Where(r => r.UserId == uid && r.StageId != stageId && allStageIds.Contains(r.StageId))
+                        .SumAsync(r => (int?)r.Points) ?? 0;
+                    te.TotalPoints = otherStagesPts + totalPts;
+                }
 
                 // Actualizar StageEntry (crear si no existe — pago único da acceso a todas las fases)
                 var se = await _db.StageEntries
@@ -256,7 +283,23 @@ int totalPts = 0, resultHits = 0, scoreHits = 0, total = 0;
                 .OrderByDescending(r => r.Points).ToListAsync();
             for (int i = 0; i < results.Count; i++) results[i].Rank = i + 1;
 
-            stage.Status = StageStatus.Finished;
+            // Solo marcar como Finished si TODOS los partidos
+            // de la fase tienen status FT
+            var totalPartidos      = stage.Matches.Count;
+            var partidosTerminados = stage.Matches
+                .Count(m => m.Status == "FT");
+
+            if (totalPartidos > 0 &&
+                partidosTerminados == totalPartidos)
+            {
+                stage.Status = StageStatus.Finished;
+            }
+            // Si no han terminado todos dejar en InProgress
+            else if (partidosTerminados > 0)
+            {
+                stage.Status = StageStatus.InProgress;
+            }
+
             await _db.SaveChangesAsync();
             _log.LogInformation("Puntos calculados para fase {S}", stage.Name);
         }

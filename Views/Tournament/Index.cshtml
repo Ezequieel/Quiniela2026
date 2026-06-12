@@ -241,6 +241,22 @@
                     </div>
                 }
 
+                @if (s.HasPartidosHoy)
+                {
+                    <div class="partidos-hoy-banner">
+                        <span class="partidos-hoy-text">
+                            @s.PartidosHoyCount partido(s) finalizado(s) — registro disponible
+                        </span>
+                        <a asp-action="Log"
+                           asp-controller="History"
+                           asp-route-tournamentId="@t.Id"
+                           asp-route-stageId="@s.Id"
+                           class="partidos-hoy-link">
+                            Ver registro de predicciones →
+                        </a>
+                    </div>
+                }
+
                 <div class="stage-actions">
                     @if (s.IsPaid || s.HasGroupApprovedPayment)
                     {
@@ -285,25 +301,10 @@
                    class="btn btn-outline btn-sm">
                     Clasificación general
                 </a>
-                @{
-                    var todasCerradas = !t.Stages.Any(s =>
-                        s.Status != "Finished" &&
-                        s.Deadline > DateTime.UtcNow);
-                }
-                @if (todasCerradas || User.IsInRole("Admin"))
-                {
-                    <a asp-controller="History" asp-action="Log" asp-route-tournamentId="@t.Id"
-                       class="btn btn-outline btn-sm">
-                        Registro de predicciones
-                    </a>
-                }
-                else
-                {
-                    <span class="btn btn-secondary btn-sm" style="opacity:.5;cursor:default"
-                          title="Disponible cuando cierren las predicciones">
-                        🔒 Registro de predicciones
-                    </span>
-                }
+                <a asp-controller="History" asp-action="Log" asp-route-tournamentId="@t.Id"
+                   class="btn btn-outline btn-sm">
+                    Registro de predicciones
+                </a>
             </div>
         }
     </div>

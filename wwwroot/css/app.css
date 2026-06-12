@@ -676,6 +676,36 @@ textarea.input, textarea.form-control { resize: vertical; min-height: 90px; }
 .stage-banner { margin: 8px -1px; overflow: hidden; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
 .stage-banner-img { width: 100%; height: 68px; object-fit: cover; display: block; transition: transform .3s ease; }
 .stage-card:hover .stage-banner-img { transform: scale(1.03); }
+.partidos-hoy-banner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    background: #FFFBEC;
+    border: 1px solid rgba(201,168,76,.25);
+    border-left: 3px solid #C9A84C;
+    border-radius: 4px;
+    padding: 7px 10px;
+    margin-top: 8px;
+    flex-wrap: wrap;
+}
+.partidos-hoy-text {
+    font-size: .76rem;
+    font-weight: 600;
+    color: #8B6914;
+    flex: 1;
+}
+.partidos-hoy-link {
+    font-size: .74rem;
+    font-weight: 700;
+    color: #C8001E;
+    text-decoration: none;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+.partidos-hoy-link:hover {
+    text-decoration: underline;
+}
 .stage-pending-notice {
   background: #FEF3C7; border: 1px solid #FDE68A;
   border-radius: var(--r); padding: 7px 10px;

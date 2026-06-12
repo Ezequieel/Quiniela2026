@@ -76,6 +76,8 @@ namespace QuinielaApp.ViewModels
         public int      MyPoints    { get; set; }
         public int      MyRank      { get; set; }
         public int      TotalParticipants { get; set; }
+        public bool     HasPartidosHoy   { get; set; }
+        public int      PartidosHoyCount { get; set; }
     }
 
     // ── Pago / comprobante ────────────────────────────────

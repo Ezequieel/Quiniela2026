@@ -83,6 +83,12 @@ namespace QuinielaApp.Controllers
         public async Task<IActionResult> Index()
         {
             var uid  = Uid;
+
+            // Banner "partidos de hoy" — disponible a partir de las 11pm hora de El Salvador (UTC-6)
+            var ahoraSv     = DateTime.UtcNow.AddHours(-6);
+            var son11pm     = ahoraSv.Hour >= 23;
+            var fechaBuscar = son11pm ? ahoraSv.Date : ahoraSv.Date.AddDays(-1);
+
             var tournaments = await _db.Tournaments
                 .Include(t => t.Stages)
                 .Include(t => t.Entries)
@@ -171,6 +177,9 @@ namespace QuinielaApp.Controllers
                     var nowStage       = DateTime.UtcNow;
                     var openMatches    = stageMatches.Count(m => m.Status == "NS" && nowStage < m.MatchDate.AddMinutes(-15));
                     var closedMatches  = stageMatches.Count(m => m.Status == "NS" && nowStage >= m.MatchDate.AddMinutes(-15));
+                    var partidosDia    = stageMatches
+                        .Where(m => m.Status == "FT" && m.MatchDate.AddHours(-6).Date == fechaBuscar)
+                        .ToList();
                     var hasPending = !paid && await _paymentSvc.UserHasPendingPaymentAsync(uid, s.Id);
 
                     var hasGroupApproved = !string.IsNullOrEmpty(s.GroupKey) && groupApprovedKeys.Contains(s.GroupKey!);
@@ -200,7 +209,9 @@ namespace QuinielaApp.Controllers
                                                 && openMatches > 0,
                         MyPoints                = sr?.Points ?? 0,
                         MyRank                  = sr?.Rank ?? 0,
-                        TotalParticipants       = total
+                        TotalParticipants       = total,
+                        HasPartidosHoy          = partidosDia.Any(),
+                        PartidosHoyCount        = partidosDia.Count
                     });
                 }
                 vm.Tournaments.Add(card);
@@ -583,43 +594,63 @@ namespace QuinielaApp.Controllers
 
         public HistoryController(AppDbContext db) => _db = db;
 
-        public async Task<IActionResult> Log(int tournamentId, int? userId = null, int? matchId = null)
+        public async Task<IActionResult> Log(int tournamentId, int? userId = null, int? matchId = null, int? stageId = null)
         {
             var tournament = await _db.Tournaments.FindAsync(tournamentId);
             if (tournament == null) return NotFound();
 
-            // Solo mostrar el registro si TODAS las fases tienen el deadline cerrado
-            // o están finalizadas — para que nadie copie predicciones de otros
-            var uid = Uid;
-            var isAdmin = User.IsInRole("Admin");
-            if (!isAdmin)
-            {
-                var hayFaseAbierta = await _db.Stages.AnyAsync(s =>
-                    s.TournamentId == tournamentId &&
-                    s.Status != StageStatus.Finished &&
-                    s.PredictionDeadline > DateTime.UtcNow);
+            // Historial acumulativo y progresivo: un partido entra al registro
+            // cuando termina (FT) y ya pasaron las 11pm hora SV del día en que
+            // se jugó. Antes de eso simplemente no aparece — no hace falta
+            // bloquear la página completa.
+            var ahoraSv = DateTime.UtcNow.AddHours(-6);
 
-                if (hayFaseAbierta)
-                {
-                    TempData["Error"] = "El registro de predicciones estará disponible cuando cierren todas las fases.";
-                    return RedirectToAction("Index", "Tournament");
-                }
-            }
-
-            // Base query: predicciones del torneo
+            // Base query: predicciones de partidos visibles del torneo
             var query = _db.Predictions
                 .Include(p => p.User)
                 .Include(p => p.Match).ThenInclude(m => m.Stage)
-                .Where(p => p.Match.Stage.TournamentId == tournamentId)
+                .Where(p =>
+                    p.Match.Stage.TournamentId == tournamentId &&
+                    p.Match.Status == "FT" &&
+                    (
+                        p.Match.MatchDate.AddHours(-6).Date < ahoraSv.Date
+                        ||
+                        (p.Match.MatchDate.AddHours(-6).Date == ahoraSv.Date
+                         && ahoraSv.Hour >= 23)
+                    ))
                 .AsQueryable();
 
             // Aplicar filtros
             if (userId.HasValue)   query = query.Where(p => p.UserId  == userId.Value);
             if (matchId.HasValue)  query = query.Where(p => p.MatchId == matchId.Value);
+            if (stageId.HasValue)  query = query.Where(p => p.Match.StageId == stageId.Value);
 
             var predictions = await query
-                .OrderByDescending(p => p.UpdatedAt)
+                .OrderBy(p => p.Match.MatchDate)
+                .ThenByDescending(p => p.PointsEarned)
                 .ToListAsync();
+
+            // Partidos que entran en el filtro actual (para mensajes de estado vacío)
+            var matchesEnFiltroQuery = _db.Matches
+                .Where(m => m.Stage.TournamentId == tournamentId)
+                .AsQueryable();
+            if (matchId.HasValue) matchesEnFiltroQuery = matchesEnFiltroQuery.Where(m => m.Id == matchId.Value);
+            if (stageId.HasValue) matchesEnFiltroQuery = matchesEnFiltroQuery.Where(m => m.StageId == stageId.Value);
+
+            var matchesEnFiltro = await matchesEnFiltroQuery
+                .Select(m => new { m.MatchDate, m.Status })
+                .ToListAsync();
+
+            var tienePartidosFuturos = matchesEnFiltro
+                .Any(m => m.MatchDate.AddHours(-6) > ahoraSv && m.Status == "NS");
+
+            var tienePartidosHoyNoVisibles = matchesEnFiltro
+                .Any(m => m.Status == "FT" &&
+                       m.MatchDate.AddHours(-6).Date == ahoraSv.Date
+                       && ahoraSv.Hour < 23);
+
+            ViewBag.TienePartidosFuturos       = tienePartidosFuturos;
+            ViewBag.TienePartidosHoyNoVisibles = tienePartidosHoyNoVisibles;
 
             // Usuarios del torneo para el dropdown
             var users = await _db.TournamentEntries
@@ -807,10 +838,43 @@ namespace QuinielaApp.Controllers
         }
 
         // ── Calcular puntos ───────────────────────────────
+        // Idempotente: limpia los resultados de la fase y resetea las
+        // predicciones de los partidos finalizados antes de recalcular,
+        // así se puede presionar varias veces sin duplicar TotalPoints.
         [HttpPost]
         public async Task<IActionResult> CalculatePoints(int id) // id = stageId
         {
+            // 1. Limpiar StageResults de esta fase
+            var oldResults = await _db.StageResults
+                .Where(r => r.StageId == id)
+                .ToListAsync();
+            _db.StageResults.RemoveRange(oldResults);
+
+            // 2. Resetear predicciones de partidos finalizados de esta fase
+            var matchIds = await _db.Matches
+                .Where(m => m.StageId == id && m.Status == "FT")
+                .Select(m => m.Id)
+                .ToListAsync();
+            var predsToReset = await _db.Predictions
+                .Where(p => matchIds.Contains(p.MatchId))
+                .ToListAsync();
+            foreach (var p in predsToReset)
+            {
+                p.PointsEarned  = 0;
+                p.ResultCorrect = null;
+                p.ScoreCorrect  = null;
+            }
+
+            // Permitir recalcular aunque la fase ya esté marcada como Finished
+            var stage = await _db.Stages.FindAsync(id);
+            if (stage != null && stage.Status == StageStatus.Finished)
+                stage.Status = StageStatus.InProgress;
+
+            await _db.SaveChangesAsync();
+
+            // 3. Recalcular limpio
             await _predSvc.CalculateStagePointsAsync(id);
+
             TempData["Success"] = "Puntos calculados correctamente.";
             return RedirectToAction("Index");
         }

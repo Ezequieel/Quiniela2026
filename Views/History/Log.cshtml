@@ -86,11 +86,24 @@
 <div class="card" style="padding:0;overflow:hidden">
     @if (!Model.Rows.Any())
     {
-        <div class="empty-box">
-            <div class="empty-icon">📋</div>
-            <h3>Sin predicciones</h3>
-            <p>No hay predicciones registradas con los filtros seleccionados.</p>
-        </div>
+        @if (ViewBag.TienePartidosFuturos == true)
+        {
+            <div class="info-banner" style="text-align:center;padding:2rem">
+                No hay predicciones para mostrar. Los partidos seleccionados aún no se han jugado.
+            </div>
+        }
+        else if (ViewBag.TienePartidosHoyNoVisibles == true)
+        {
+            <div class="info-banner" style="text-align:center;padding:2rem">
+                El registro de este partido estará disponible esta noche a las 11:00 PM hora SV.
+            </div>
+        }
+        else
+        {
+            <div class="info-banner" style="text-align:center;padding:2rem">
+                No hay predicciones registradas para los partidos seleccionados.
+            </div>
+        }
     }
     else
     {
