@@ -118,6 +118,17 @@ namespace QuinielaApp.Services
             }
             await _db.SaveChangesAsync();
 
+            // Otros partidos FT de la fase que no forman parte de este batch:
+            // sus puntos ya calculados deben sumarse al total de la fase para
+            // no sobrescribir StageResult/StageEntry/TournamentEntry con solo
+            // los puntos de los partidos de este batch.
+            var otherFtMatchIds = await _db.Matches
+                .Where(m => m.StageId == stageId && m.Status == "FT" &&
+                            m.HomeScore != null && m.AwayScore != null &&
+                            !matchIds.Contains(m.Id))
+                .Select(m => m.Id)
+                .ToListAsync();
+
             foreach (var uid in participants)
             {
                 int totalPts = 0, resultHits = 0, scoreHits = 0;
@@ -142,6 +153,16 @@ namespace QuinielaApp.Services
                     else               { pts = PTS_NOTHING; }
                     pred.PointsEarned = pts;
                     totalPts += pts;
+                }
+
+                if (otherFtMatchIds.Count > 0)
+                {
+                    var otherStats = await _db.Predictions
+                        .Where(p => p.UserId == uid && otherFtMatchIds.Contains(p.MatchId))
+                        .ToListAsync();
+                    totalPts   += otherStats.Sum(p => p.PointsEarned);
+                    resultHits += otherStats.Count(p => p.ResultCorrect == true);
+                    scoreHits  += otherStats.Count(p => p.ScoreCorrect == true);
                 }
 
                 // Actualizar / crear StageResult con puntos parciales
