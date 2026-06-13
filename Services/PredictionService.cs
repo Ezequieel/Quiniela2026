@@ -192,6 +192,36 @@ namespace QuinielaApp.Services
                 stageId, finishedMatches.Count);
         }
 
+        // ── Recalcular predicciones pendientes (FT con ResultCorrect == null) ──
+        // Cubre casos donde un partido pasó a FT sin que se ejecutara el cálculo
+        // de puntos (ej. sync manual de partidos). Devuelve la cantidad de
+        // partidos recalculados.
+        public async Task<int> CalculatePendingPointsAsync(int stageId)
+        {
+            var finishedMatches = await _db.Matches
+                .Where(m => m.StageId == stageId &&
+                            m.Status == "FT" &&
+                            m.HomeScore != null &&
+                            m.AwayScore != null)
+                .ToListAsync();
+            if (finishedMatches.Count == 0) return 0;
+
+            var matchIds = finishedMatches.Select(m => m.Id).ToList();
+            var pendingMatchIds = await _db.Predictions
+                .Where(p => matchIds.Contains(p.MatchId) && p.ResultCorrect == null)
+                .Select(p => p.MatchId)
+                .Distinct()
+                .ToListAsync();
+            if (pendingMatchIds.Count == 0) return 0;
+
+            var matchesToCalculate = finishedMatches
+                .Where(m => pendingMatchIds.Contains(m.Id))
+                .ToList();
+
+            await CalculatePartialPointsAsync(stageId, matchesToCalculate);
+            return matchesToCalculate.Count;
+        }
+
         // ── Calcular puntos ───────────────────────────────
         public async Task CalculateStagePointsAsync(int stageId)
         {

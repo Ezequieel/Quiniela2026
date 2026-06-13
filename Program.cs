@@ -31,6 +31,7 @@ builder.Services.AddScoped<SpecialPredictionService>();
 builder.Services.AddScoped<MatchSyncService>();
 builder.Services.AddHttpClient();
 builder.Services.AddScoped<ApiFootballService>();
+builder.Services.AddScoped<EmailService>();
 
 // Background service de sincronización automática
 builder.Services.AddHostedService<ScoreSyncBackgroundService>();

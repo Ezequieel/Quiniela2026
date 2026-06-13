@@ -6,7 +6,8 @@ using QuinielaApp.Services;
 namespace QuinielaApp.BackgroundServices
 {
     /// <summary>
-    /// Sincroniza scores cada 15s cuando hay partidos activos.
+    /// Sincroniza scores con intervalo dinámico: 30s cuando hay partidos en
+    /// curso o por empezar dentro de 90min, 5min cuando no hay actividad.
     /// Cuando todos los partidos de una fase terminan → calcula puntos automáticamente.
     /// </summary>
     public class ScoreSyncBackgroundService : BackgroundService
@@ -14,8 +15,8 @@ namespace QuinielaApp.BackgroundServices
         private readonly IServiceProvider _services;
         private readonly ILogger<ScoreSyncBackgroundService> _log;
 
-        private static readonly TimeSpan ActiveInterval = TimeSpan.FromSeconds(30);
-        private static readonly TimeSpan IdleInterval   = TimeSpan.FromSeconds(20);
+        private const int ActiveIntervalSeconds = 30;
+        private const int IdleIntervalSeconds   = 300;
 
         public ScoreSyncBackgroundService(IServiceProvider services, ILogger<ScoreSyncBackgroundService> log)
         { _services = services; _log = log; }
@@ -27,19 +28,20 @@ namespace QuinielaApp.BackgroundServices
             {
                 try
                 {
-                    var hasActive = await SyncAsync();
-                    await Task.Delay(hasActive ? ActiveInterval : IdleInterval, ct);
+                    var delaySec = await SyncAsync();
+                    await Task.Delay(TimeSpan.FromSeconds(delaySec), ct);
                 }
                 catch (OperationCanceledException) { break; }
                 catch (Exception ex)
                 {
                     _log.LogError(ex, "Error en sync automático.");
-                    await Task.Delay(ActiveInterval, ct);
+                    await Task.Delay(TimeSpan.FromSeconds(ActiveIntervalSeconds), ct);
                 }
             }
         }
 
-        private async Task<bool> SyncAsync()
+        /// <summary>Ejecuta la sincronización y devuelve el delay (en segundos) hasta el próximo ciclo.</summary>
+        private async Task<int> SyncAsync()
         {
             using var scope = _services.CreateScope();
             var db          = scope.ServiceProvider.GetRequiredService<AppDbContext>();
@@ -58,23 +60,56 @@ namespace QuinielaApp.BackgroundServices
                 s.Matches.Any(m => m.Status != "FT" && m.MatchDate <= now.AddMinutes(30))
             ).ToList();
 
-            if (!stagesToSync.Any()) return false;
+            if (stagesToSync.Any())
+            {
+                _log.LogInformation("Sincronizando {N} fases...", stagesToSync.Count);
 
-            _log.LogInformation("Sincronizando {N} fases...", stagesToSync.Count);
+                // Llamar GetLiveAsync UNA sola vez por torneo (ApiLeagueId)
+                var liveCache = new Dictionary<int, List<ApiFixture>>();
+                foreach (var leagueId in stagesToSync.Select(s => s.Tournament.ApiLeagueId).Distinct())
+                    liveCache[leagueId] = await api.GetLiveAsync(leagueId);
 
-            foreach (var stage in stagesToSync)
-                await SyncStageAsync(db, api, predSvc, specialSvc, stage);
+                foreach (var stage in stagesToSync)
+                {
+                    var liveFixtures = liveCache.GetValueOrDefault(stage.Tournament.ApiLeagueId, []);
+                    await SyncStageAsync(db, api, predSvc, specialSvc, stage, liveFixtures);
+                }
 
-            await db.SaveChangesAsync();
-            return true;
+                await db.SaveChangesAsync();
+            }
+
+            // Red de seguridad: recalcular predicciones de partidos FT que
+            // quedaron sin calcular (ResultCorrect == null), p.ej. porque el
+            // partido pasó a FT por un sync manual sin pasar por el cálculo
+            // de puntos.
+            foreach (var stage in activeStages)
+                await predSvc.CalculatePendingPointsAsync(stage.Id);
+
+            // ── Intervalo dinámico para el próximo ciclo ──────
+            var allMatches = activeStages.SelectMany(s => s.Matches).ToList();
+
+            // Partido en curso ahora mismo
+            bool hayEnCurso = allMatches.Any(m =>
+                m.Status == "1H" || m.Status == "HT" ||
+                m.Status == "2H" || m.Status == "ET" ||
+                m.Status == "P");
+
+            // Partido que empieza en los próximos 90 minutos
+            // (para asegurarse de cerrar predicciones a tiempo, 15 min antes del inicio)
+            bool porEmpezar = allMatches.Any(m =>
+                m.Status == "NS" &&
+                m.MatchDate > now &&
+                m.MatchDate <= now.AddMinutes(90));
+
+            return (hayEnCurso || porEmpezar) ? ActiveIntervalSeconds : IdleIntervalSeconds;
         }
 
         private async Task SyncStageAsync(AppDbContext db, ApiFootballService api,
-            PredictionService predSvc, SpecialPredictionService specialSvc, Stage stage)
+            PredictionService predSvc, SpecialPredictionService specialSvc, Stage stage,
+            List<ApiFixture> liveFixtures)
         {
-            var now          = DateTime.UtcNow;
-            var liveFixtures = await api.GetLiveAsync(stage.Tournament.ApiLeagueId);
-            int updated      = 0;
+            var now     = DateTime.UtcNow;
+            int updated = 0;
 
             foreach (var match in stage.Matches)
             {
@@ -83,13 +118,18 @@ namespace QuinielaApp.BackgroundServices
                 var live = liveFixtures.FirstOrDefault(f => f.Fixture.Id == match.ApiMatchId);
                 if (live != null)
                 {
-                    var prev          = match.Status;
+                    var prev      = match.Status;
+                    var apiStatus = live.Fixture.Status.Short;
                     match.HomeScore   = live.Goals.Home;
                     match.AwayScore   = live.Goals.Away;
-                    match.Status      = live.Fixture.Status.Short;
+                    match.Status      = ApiFootballService.NormalizeStatus(
+                        apiStatus, live.Fixture.Status.Elapsed, match.MatchDate, match.HomeScore, match.AwayScore);
                     match.Elapsed     = live.Fixture.Status.Elapsed;
                     match.LastUpdated = now;
                     updated++;
+                    if (match.Status == "FT" && apiStatus != "FT")
+                        _log.LogWarning("{H} vs {A}: forzado a FT (API status={S}, elapsed={E})",
+                            match.HomeTeam, match.AwayTeam, apiStatus, live.Fixture.Status.Elapsed);
                     if (prev != match.Status)
                         _log.LogInformation("{H} vs {A}: {P}→{N} ({Hs}-{As})",
                             match.HomeTeam, match.AwayTeam, prev, match.Status,
@@ -100,13 +140,18 @@ namespace QuinielaApp.BackgroundServices
                     var detail = await api.GetFixtureDetailAsync(match.ApiMatchId);
                     if (detail != null)
                     {
-                        var prev          = match.Status;
+                        var prev      = match.Status;
+                        var apiStatus = detail.Fixture.Status.Short;
                         match.HomeScore   = detail.Goals.Home;
                         match.AwayScore   = detail.Goals.Away;
-                        match.Status      = detail.Fixture.Status.Short;
+                        match.Status      = ApiFootballService.NormalizeStatus(
+                            apiStatus, detail.Fixture.Status.Elapsed, match.MatchDate, match.HomeScore, match.AwayScore);
                         match.Elapsed     = detail.Fixture.Status.Elapsed;
                         match.LastUpdated = now;
                         updated++;
+                        if (match.Status == "FT" && apiStatus != "FT")
+                            _log.LogWarning("{H} vs {A}: forzado a FT (API status={S}, elapsed={E})",
+                                match.HomeTeam, match.AwayTeam, apiStatus, detail.Fixture.Status.Elapsed);
                         if (prev != match.Status)
                             _log.LogInformation("{H} vs {A} → {S} ({Hs}-{As})",
                                 match.HomeTeam, match.AwayTeam, match.Status,

@@ -18,7 +18,9 @@ namespace QuinielaApp.Controllers
     public class AccountController : Controller
     {
         private readonly AuthService _auth;
-        public AccountController(AuthService auth) => _auth = auth;
+        private readonly AppDbContext _db;
+        public AccountController(AuthService auth, AppDbContext db)
+        { _auth = auth; _db = db; }
 
         [HttpGet] public IActionResult Login(string? returnUrl = null)
         { ViewBag.ReturnUrl = returnUrl; return View(); }
@@ -47,6 +49,86 @@ namespace QuinielaApp.Controllers
         public async Task<IActionResult> Logout()
         {
             await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+            return RedirectToAction("Login");
+        }
+
+        [HttpGet]
+        public IActionResult ForgotPassword() => View();
+
+        [HttpPost]
+        public async Task<IActionResult> ForgotPassword(string email)
+        {
+            var user = await _db.Users.FirstOrDefaultAsync(u => u.Email == email);
+
+            if (user != null)
+            {
+                // Invalidar tokens anteriores
+                var oldTokens = await _db.PasswordResetTokens
+                    .Where(t => t.UserId == user.Id && !t.Used)
+                    .ToListAsync();
+                foreach (var t in oldTokens) t.Used = true;
+
+                // Crear token nuevo
+                var token = Guid.NewGuid().ToString("N") + Guid.NewGuid().ToString("N");
+                _db.PasswordResetTokens.Add(new PasswordResetToken
+                {
+                    UserId    = user.Id,
+                    Token     = token,
+                    ExpiresAt = DateTime.UtcNow.AddMinutes(30)
+                });
+                await _db.SaveChangesAsync();
+
+                var resetLink = Url.Action("ResetPassword", "Account", new { token }, Request.Scheme)!;
+
+                var emailSvc = HttpContext.RequestServices.GetRequiredService<EmailService>();
+                await emailSvc.SendPasswordResetAsync(user.Email, user.FullName, resetLink);
+            }
+
+            // Mismo mensaje siempre para no revelar si el email existe o no
+            TempData["Info"] = "Si tu correo está registrado recibirás un enlace para restablecer tu contraseña.";
+            return RedirectToAction("ForgotPassword");
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> ResetPassword(string token)
+        {
+            var t = await _db.PasswordResetTokens
+                .FirstOrDefaultAsync(x => x.Token == token && !x.Used && x.ExpiresAt > DateTime.UtcNow);
+
+            if (t == null)
+            {
+                TempData["Error"] = "El enlace es inválido o ya expiró.";
+                return RedirectToAction("Login");
+            }
+            ViewBag.Token = token;
+            return View();
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> ResetPassword(string token, string newPassword, string confirmPassword)
+        {
+            if (newPassword != confirmPassword)
+            {
+                TempData["Error"] = "Las contraseñas no coinciden.";
+                ViewBag.Token = token;
+                return View();
+            }
+
+            var t = await _db.PasswordResetTokens
+                .Include(x => x.User)
+                .FirstOrDefaultAsync(x => x.Token == token && !x.Used && x.ExpiresAt > DateTime.UtcNow);
+
+            if (t == null)
+            {
+                TempData["Error"] = "El enlace es inválido o ya expiró.";
+                return RedirectToAction("Login");
+            }
+
+            t.User.PasswordHash = newPassword;
+            t.Used = true;
+            await _db.SaveChangesAsync();
+
+            TempData["Success"] = "Contraseña actualizada. Ya puedes iniciar sesión.";
             return RedirectToAction("Login");
         }
 
@@ -876,6 +958,21 @@ namespace QuinielaApp.Controllers
             await _predSvc.CalculateStagePointsAsync(id);
 
             TempData["Success"] = "Puntos calculados correctamente.";
+            return RedirectToAction("Index");
+        }
+
+        // ── Recalcular predicciones pendientes ────────────
+        // Busca partidos FT de la fase cuyas predicciones quedaron sin
+        // calcular (ResultCorrect == null) y las recalcula, sin tocar
+        // las predicciones de partidos ya calculados.
+        [HttpPost]
+        public async Task<IActionResult> RecalcularPendientes(int id) // id = stageId
+        {
+            var count = await _predSvc.CalculatePendingPointsAsync(id);
+            if (count > 0)
+                TempData["Success"] = $"Calculadas predicciones pendientes de {count} partido(s).";
+            else
+                TempData["Info"] = "No hay predicciones pendientes de calcular.";
             return RedirectToAction("Index");
         }
 

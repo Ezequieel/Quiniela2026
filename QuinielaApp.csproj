@@ -6,9 +6,10 @@
     <RootNamespace>QuinielaApp</RootNamespace>
   </PropertyGroup>
   <ItemGroup>
+    <PackageReference Include="MailKit" Version="4.17.0" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="8.0.0" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Tools"     Version="8.0.0" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Design"    Version="8.0.0" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="8.0.0" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="8.0.0" />
 
   </ItemGroup>
 </Project>

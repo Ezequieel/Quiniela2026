@@ -16,6 +16,7 @@ namespace QuinielaApp.Data
         public DbSet<Payment>         Payments        => Set<Payment>();
         public DbSet<Prediction>      Predictions     => Set<Prediction>();
         public DbSet<StageResult>     StageResults    => Set<StageResult>();
+        public DbSet<PasswordResetToken> PasswordResetTokens => Set<PasswordResetToken>();
 
         protected override void OnModelCreating(ModelBuilder mb)
         {
@@ -83,6 +84,12 @@ namespace QuinielaApp.Data
                  .HasForeignKey(sr => sr.StageId).OnDelete(DeleteBehavior.Cascade);
                 e.HasOne(sr => sr.User).WithMany()
                  .HasForeignKey(sr => sr.UserId).OnDelete(DeleteBehavior.Restrict);
+            });
+
+            mb.Entity<PasswordResetToken>(e => {
+                e.HasOne(t => t.User).WithMany()
+                 .HasForeignKey(t => t.UserId)
+                 .OnDelete(DeleteBehavior.Cascade);
             });
         }
     }

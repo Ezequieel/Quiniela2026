@@ -135,3 +135,8 @@ C:\Users\RolandoEzequielSanch\Proyectos\QuinielaApp\obj\Debug\net8.0\refint\Quin
 C:\Users\RolandoEzequielSanch\Proyectos\QuinielaApp\obj\Debug\net8.0\QuinielaApp.pdb
 C:\Users\RolandoEzequielSanch\Proyectos\QuinielaApp\obj\Debug\net8.0\QuinielaApp.genruntimeconfig.cache
 C:\Users\RolandoEzequielSanch\Proyectos\QuinielaApp\obj\Debug\net8.0\ref\QuinielaApp.dll
+C:\Users\RolandoEzequielSanch\Proyectos\QuinielaApp\bin\Debug\net8.0\BouncyCastle.Cryptography.dll
+C:\Users\RolandoEzequielSanch\Proyectos\QuinielaApp\bin\Debug\net8.0\MailKit.dll
+C:\Users\RolandoEzequielSanch\Proyectos\QuinielaApp\bin\Debug\net8.0\MimeKit.dll
+C:\Users\RolandoEzequielSanch\Proyectos\QuinielaApp\bin\Debug\net8.0\System.Security.Cryptography.Pkcs.dll
+C:\Users\RolandoEzequielSanch\Proyectos\QuinielaApp\bin\Debug\net8.0\runtimes\win\lib\net8.0\System.Security.Cryptography.Pkcs.dll

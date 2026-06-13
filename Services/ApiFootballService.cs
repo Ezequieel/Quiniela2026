@@ -86,6 +86,25 @@ namespace QuinielaApp.Services
         public static string GetStat(List<ApiStatItem>? stats, string type) =>
             stats?.FirstOrDefault(s => s.Type == type)?.Value?.ToString() ?? "0";
 
+        // ── Forzar FT cuando la API se queda atascada con un status
+        // intermedio aunque el partido ya terminó ────────────────
+        public static string NormalizeStatus(string apiStatus, int? elapsed, DateTime matchDate, int? homeScore, int? awayScore)
+        {
+            if (apiStatus == "FT") return apiStatus;
+            if (!homeScore.HasValue || !awayScore.HasValue) return apiStatus;
+
+            // 2H con tiempo de descuento largo (90+5 o más) y marcador definido
+            if (apiStatus == "2H" && elapsed >= 95) return "FT";
+
+            // Cualquier status "en curso" que lleve más de 130min desde el
+            // inicio del partido y ya tenga marcador definido
+            if (apiStatus != "NS" && apiStatus != "1H" && apiStatus != "HT" &&
+                matchDate <= DateTime.UtcNow.AddMinutes(-130))
+                return "FT";
+
+            return apiStatus;
+        }
+
         // ── Llamada HTTP con URL completa ─────────────────
         private async Task<List<T>> CallAsync<T>(string endpoint)
         {

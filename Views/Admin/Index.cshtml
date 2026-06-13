@@ -124,6 +124,10 @@
                             <button class="btn btn-primary btn-sm">Calcular puntos</button>
                         </form>
                     }
+                    <form asp-action="RecalcularPendientes" asp-route-id="@s.Id" method="post" style="display:inline">
+                        @Html.AntiForgeryToken()
+                        <button class="btn btn-outline btn-sm">Recalcular pendientes</button>
+                    </form>
                     <a asp-controller="Leaderboard" asp-action="Index"
                        asp-route-tournamentId="@t.Id" asp-route-stageId="@s.Id"
                        class="btn btn-outline btn-sm">Clasificacion</a>

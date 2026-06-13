@@ -30,7 +30,10 @@
 
       <form asp-action="Register" method="post">
         @Html.AntiForgeryToken()
-        <div asp-validation-summary="All" class="val-summary"></div>
+        @if (!ViewData.ModelState.IsValid)
+        {
+            <div asp-validation-summary="All" class="val-summary"></div>
+        }
 
         <div class="field">
           <label asp-for="FullName">Nombre completo</label>
