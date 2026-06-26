@@ -90,16 +90,26 @@ namespace QuinielaApp.Services
         // intermedio aunque el partido ya terminó ────────────────
         public static string NormalizeStatus(string apiStatus, int? elapsed, DateTime matchDate, int? homeScore, int? awayScore)
         {
-            if (apiStatus == "FT") return apiStatus;
-            if (!homeScore.HasValue || !awayScore.HasValue) return apiStatus;
+            // Status finales de la API → FT interno (AET = After Extra Time, PEN = Penalties)
+            if (apiStatus == "FT"  ||
+                apiStatus == "AET" ||
+                apiStatus == "PEN" ||
+                apiStatus == "AWD" ||
+                apiStatus == "WO")
+                return "FT";
 
-            // 2H con tiempo de descuento largo (90+5 o más) y marcador definido
-            if (apiStatus == "2H" && elapsed >= 95) return "FT";
+            // Regla 1: 2H con tiempo de descuento largo y marcador definido
+            if (apiStatus == "2H" &&
+                elapsed >= 95 &&
+                homeScore.HasValue && awayScore.HasValue)
+                return "FT";
 
-            // Cualquier status "en curso" que lleve más de 130min desde el
-            // inicio del partido y ya tenga marcador definido
-            if (apiStatus != "NS" && apiStatus != "1H" && apiStatus != "HT" &&
-                matchDate <= DateTime.UtcNow.AddMinutes(-130))
+            // Regla 2: más de 130 min desde el inicio con marcador definido
+            if (matchDate < DateTime.UtcNow.AddMinutes(-130) &&
+                apiStatus != "NS" &&
+                apiStatus != "1H" &&
+                apiStatus != "HT" &&
+                homeScore.HasValue && awayScore.HasValue)
                 return "FT";
 
             return apiStatus;

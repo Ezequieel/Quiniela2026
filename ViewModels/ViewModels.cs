@@ -97,6 +97,15 @@ namespace QuinielaApp.ViewModels
         public string? Notes       { get; set; }
     }
 
+    // ── Filtro de fases (admin pagos) ────────────────────
+    public class StageFilterVm
+    {
+        public int    Id             { get; set; }
+        public string Name           { get; set; } = "";
+        public string TournamentName { get; set; } = "";
+        public string Type           { get; set; } = "";
+    }
+
     // ── Predicciones ──────────────────────────────────────
     public class StageMatchesVm
     {
@@ -107,6 +116,7 @@ namespace QuinielaApp.ViewModels
         public DateTime Deadline   { get; set; }
         public bool     CanPredict { get; set; }
         public bool     IsPaid     { get; set; }
+        public bool     IsKnockout { get; set; }
         public List<MatchPredVm> Matches { get; set; } = new();
     }
 
@@ -162,14 +172,21 @@ namespace QuinielaApp.ViewModels
         public string   Status       { get; set; } = "NS";
         public int?     Elapsed      { get; set; }
         // Predicción del usuario
-        public string?  UserResult      { get; set; }  // "Home"|"Draw"|"Away"
-        public int?     UserHomeScore   { get; set; }
-        public int?     UserAwayScore   { get; set; }
-        public bool?    ResultCorrect   { get; set; }
-        public bool?    ScoreCorrect    { get; set; }
-        public int      PointsEarned    { get; set; }
-        public int      SpecialPoints   { get; set; }
-        public SpecialPredVm? Special      { get; set; }
+        public string?  UserResult        { get; set; }  // "Home"|"Draw"|"Away"
+        public int?     UserHomeScore     { get; set; }
+        public int?     UserAwayScore     { get; set; }
+        public bool?    ResultCorrect     { get; set; }
+        public bool?    ScoreCorrect      { get; set; }
+        public int      PointsEarned      { get; set; }
+        public int      SpecialPoints     { get; set; }
+        // Eliminatorias
+        public bool     IsKnockout      { get; set; }
+        public string?  UserQualifier   { get; set; }  // "Home" | "Away" — predicción del usuario
+        public bool?    UserPenaltyPred { get; set; }  // true = predijo penaltis, false = ET, null = sin pred
+        public string?  MatchQualifier  { get; set; }  // "Home" | "Away" — quién clasificó de verdad
+        public bool     HasExtension    { get; set; }  // true si ApiStatus == "AET" o "PEN"
+        public bool     HuboPenaltis    { get; set; }  // true si ApiStatus == "PEN"
+        public SpecialPredVm? Special    { get; set; }
 
         public bool IsLive     => Status is "1H" or "HT" or "2H" or "ET" or "P";
         public bool IsFinished => Status == "FT";

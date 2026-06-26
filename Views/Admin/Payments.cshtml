@@ -1,4 +1,5 @@
 @model List<Payment>
+@using QuinielaApp.ViewModels
 @{ ViewData["Title"] = "Comprobantes de pago"; Layout = "~/Views/Shared/_Layout.cshtml"; }
 
 <div class="page-header">
@@ -8,170 +9,320 @@
     </div>
 </div>
 
+@* ── Barra de filtros ── *@
+<form method="get" asp-action="Payments" class="filter-bar">
+    <div class="filter-group">
+        <label class="filter-label">Fase</label>
+        <select name="stageId" class="input input-sm" onchange="this.form.submit()">
+            <option value="">Todas las fases</option>
+            @foreach (var s in ViewBag.Stages as List<StageFilterVm> ?? new())
+            {
+                <option value="@s.Id" selected="@(ViewBag.SelectedStage as int? == s.Id ? "selected" : null)">
+                    @s.TournamentName — @s.Name
+                </option>
+            }
+        </select>
+    </div>
+
+    <div class="filter-group">
+        <label class="filter-label">Estado</label>
+        <select name="status" class="input input-sm" onchange="this.form.submit()">
+            <option value="">Todos</option>
+            <option value="Pending"  selected="@(ViewBag.SelectedStatus == "Pending"  ? "selected" : null)">Pendientes</option>
+            <option value="Approved" selected="@(ViewBag.SelectedStatus == "Approved" ? "selected" : null)">Aprobados</option>
+            <option value="Rejected" selected="@(ViewBag.SelectedStatus == "Rejected" ? "selected" : null)">Rechazados</option>
+        </select>
+    </div>
+
+    @if (ViewBag.SelectedStage != null || ViewBag.SelectedStatus != null)
+    {
+        <a asp-action="Payments" class="btn btn-outline btn-sm" style="align-self:flex-end">Limpiar filtros</a>
+    }
+</form>
+
+@* ── Stats de la selección actual ── *@
+<div class="filter-stats">
+    <div class="filter-stat">
+        <span class="filter-stat-num">@ViewBag.TotalPagos</span>
+        <span class="filter-stat-lbl">Total</span>
+    </div>
+    <div class="filter-stat">
+        <span class="filter-stat-num pending">@ViewBag.Pendientes</span>
+        <span class="filter-stat-lbl">Pendientes</span>
+    </div>
+    <div class="filter-stat">
+        <span class="filter-stat-num approved">@ViewBag.Aprobados</span>
+        <span class="filter-stat-lbl">Aprobados</span>
+    </div>
+    <div class="filter-stat">
+        <span class="filter-stat-num gold">$@((ViewBag.BolsaFiltrada as decimal? ?? 0m).ToString("N2"))</span>
+        <span class="filter-stat-lbl">Bolsa</span>
+    </div>
+</div>
+
 @{
     var pending  = Model.Where(p => p.Status == PaymentStatus.Pending).ToList();
     var approved = Model.Where(p => p.Status == PaymentStatus.Approved).ToList();
+    bool filteredByStatus = ViewBag.SelectedStatus != null;
 }
 
-@* ── Pendientes ── *@
-<div style="display:flex;align-items:center;gap:.6rem;margin:1.2rem 0 .6rem">
-    <span class="sec-label" style="margin-bottom:0">Pendientes de revisión</span>
-    @if (pending.Any())
-    {
-        <span class="chip chip-amber">@pending.Count</span>
-    }
-</div>
-
-<div class="card" style="padding:0;overflow:hidden;margin-bottom:1.6rem">
-    @if (!pending.Any())
-    {
-        <div class="empty-box" style="padding:1.4rem">
-            <p style="color:var(--text-3);margin:0">Sin comprobantes pendientes.</p>
-        </div>
-    }
-    else
-    {
-        <div class="table-wrap">
-            <table class="lb-table">
-                <thead>
-                    <tr>
-                        <th>Participante</th>
-                        <th>Fase / Torneo</th>
-                        <th>Monto</th>
-                        <th>Fecha</th>
-                        <th>Comprobante</th>
-                        <th>Acciones</th>
-                    </tr>
-                </thead>
-                <tbody>
-                @foreach (var p in pending)
-                {
-                    <tr>
-                        <td>
-                            <div style="font-weight:600;font-size:.85rem">@p.User.FullName</div>
-                            <div style="color:var(--text-3);font-size:.74rem">@@@p.User.Username</div>
-                        </td>
-                        <td style="font-size:.84rem">
-                            <div>@p.Stage.Name</div>
-                            <div style="color:var(--text-3);font-size:.75rem">@p.Stage.Tournament?.Name</div>
-                            @if (!string.IsNullOrEmpty(p.Stage.GroupKey))
+@if (filteredByStatus)
+{
+    @* ── Tabla única cuando hay filtro de estado ── *@
+    <div class="card" style="padding:0;overflow:hidden">
+        @if (!Model.Any())
+        {
+            <div class="empty-box" style="padding:1.4rem">
+                <p style="color:var(--text-3);margin:0">No hay comprobantes con ese filtro.</p>
+            </div>
+        }
+        else
+        {
+            <div class="table-wrap">
+                <table class="lb-table">
+                    <thead>
+                        <tr>
+                            <th>Participante</th>
+                            <th>Fase</th>
+                            <th>Torneo</th>
+                            <th>Estado</th>
+                            <th>Monto</th>
+                            <th>Fecha</th>
+                            <th>Comprobante</th>
+                            @if (ViewBag.SelectedStatus == "Pending")
                             {
-                                var fasesGrupo = p.Stage.Tournament?.Stages
-                                    .Where(s => s.GroupKey == p.Stage.GroupKey)
-                                    .OrderBy(s => s.OrderNum).ToList();
-                                if (fasesGrupo != null && fasesGrupo.Count > 1)
+                                <th>Acciones</th>
+                            }
+                        </tr>
+                    </thead>
+                    <tbody>
+                    @foreach (var p in Model)
+                    {
+                        <tr>
+                            <td>
+                                <div style="font-weight:600;font-size:.85rem">@p.User.FullName</div>
+                                <div style="color:var(--text-3);font-size:.74rem">@@@p.User.Username</div>
+                            </td>
+                            <td style="font-size:.84rem">@p.Stage.Name</td>
+                            <td style="font-size:.84rem;color:var(--text-3)">@p.Stage.Tournament?.Name</td>
+                            <td>
+                                @if (p.Status == PaymentStatus.Pending)
                                 {
-                                    <div style="margin-top:.3rem;font-size:.73rem;color:#16a34a;font-weight:500">
-                                        Cubre @fasesGrupo.Count fases del torneo
+                                    <span class="chip chip-amber">Pendiente</span>
+                                }
+                                else if (p.Status == PaymentStatus.Approved)
+                                {
+                                    <span class="chip chip-green">Aprobado</span>
+                                }
+                                else
+                                {
+                                    <span class="chip chip-red">Rechazado</span>
+                                }
+                            </td>
+                            <td style="font-weight:700;color:var(--text-1)">$@p.Amount</td>
+                            <td style="color:var(--text-3);font-size:.8rem">@p.CreatedAt.ToString("dd/MM/yyyy HH:mm")</td>
+                            <td>
+                                @if (!string.IsNullOrEmpty(p.VoucherPath))
+                                {
+                                    if (p.VoucherPath.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase))
+                                    {
+                                        <a href="@p.VoucherPath" target="_blank" class="btn btn-secondary btn-sm">Ver PDF</a>
+                                    }
+                                    else
+                                    {
+                                        <a href="@p.VoucherPath" target="_blank">
+                                            <img src="@p.VoucherPath" alt="Comprobante"
+                                                 style="width:56px;height:38px;object-fit:cover;border-radius:4px;border:1px solid var(--border)" />
+                                        </a>
+                                    }
+                                }
+                            </td>
+                            @if (ViewBag.SelectedStatus == "Pending")
+                            {
+                                <td>
+                                    <div style="display:flex;gap:.4rem;flex-wrap:wrap">
+                                        <form asp-action="ApprovePayment" asp-route-id="@p.Id" method="post" style="display:inline">
+                                            @Html.AntiForgeryToken()
+                                            <button type="submit" class="btn btn-sm"
+                                                    style="background:var(--green);color:#fff;border:none;font-family:'Barlow Condensed',sans-serif;font-weight:700;text-transform:uppercase;letter-spacing:.06em">
+                                                Aprobar
+                                            </button>
+                                        </form>
+                                        <form asp-action="RejectPayment" asp-route-id="@p.Id" method="post" style="display:inline"
+                                              onsubmit="return confirm('¿Rechazar el comprobante de @p.User.FullName?')">
+                                            @Html.AntiForgeryToken()
+                                            <button type="submit" class="btn btn-danger btn-sm">Rechazar</button>
+                                        </form>
                                     </div>
-                                }
+                                </td>
                             }
-                        </td>
-                        <td style="font-weight:700;color:var(--text-1)">$@p.Amount</td>
-                        <td style="color:var(--text-3);font-size:.8rem">@p.CreatedAt.ToString("dd/MM/yyyy HH:mm")</td>
-                        <td>
-                            @if (!string.IsNullOrEmpty(p.VoucherPath))
-                            {
-                                if (p.VoucherPath.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase))
-                                {
-                                    <a href="@p.VoucherPath" target="_blank" class="btn btn-secondary btn-sm">Ver PDF</a>
-                                }
-                                else
-                                {
-                                    <a href="@p.VoucherPath" target="_blank">
-                                        <img src="@p.VoucherPath" alt="Comprobante"
-                                             style="width:56px;height:38px;object-fit:cover;border-radius:4px;border:1px solid var(--border)" />
-                                    </a>
-                                }
-                            }
-                        </td>
-                        <td>
-                            <div style="display:flex;gap:.4rem;flex-wrap:wrap">
-                                <form asp-action="ApprovePayment" asp-route-id="@p.Id" method="post" style="display:inline">
-                                    @Html.AntiForgeryToken()
-                                    <button type="submit" class="btn btn-sm"
-                                            style="background:var(--green);color:#fff;border:none;font-family:'Barlow Condensed',sans-serif;font-weight:700;text-transform:uppercase;letter-spacing:.06em">
-                                        Aprobar
-                                    </button>
-                                </form>
-                                <form asp-action="RejectPayment" asp-route-id="@p.Id" method="post" style="display:inline"
-                                      onsubmit="return confirm('¿Rechazar el comprobante de @p.User.FullName?')">
-                                    @Html.AntiForgeryToken()
-                                    <button type="submit" class="btn btn-danger btn-sm">
-                                        Rechazar
-                                    </button>
-                                </form>
-                            </div>
-                        </td>
-                    </tr>
-                }
-                </tbody>
-            </table>
-        </div>
-    }
-</div>
+                        </tr>
+                    }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
+}
+else
+{
+    @* ── Sin filtro de estado: secciones Pendientes / Aprobados ── *@
+    <div style="display:flex;align-items:center;gap:.6rem;margin:1.2rem 0 .6rem">
+        <span class="sec-label" style="margin-bottom:0">Pendientes de revisión</span>
+        @if (pending.Any())
+        {
+            <span class="chip chip-amber">@pending.Count</span>
+        }
+    </div>
 
-@* ── Aprobados ── *@
-<div style="margin:1.2rem 0 .6rem">
-    <span class="sec-label" style="margin-bottom:0">Aprobados</span>
-</div>
+    <div class="card" style="padding:0;overflow:hidden;margin-bottom:1.6rem">
+        @if (!pending.Any())
+        {
+            <div class="empty-box" style="padding:1.4rem">
+                <p style="color:var(--text-3);margin:0">Sin comprobantes pendientes.</p>
+            </div>
+        }
+        else
+        {
+            <div class="table-wrap">
+                <table class="lb-table">
+                    <thead>
+                        <tr>
+                            <th>Participante</th>
+                            <th>Fase</th>
+                            <th>Torneo</th>
+                            <th>Monto</th>
+                            <th>Fecha</th>
+                            <th>Comprobante</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    @foreach (var p in pending)
+                    {
+                        <tr>
+                            <td>
+                                <div style="font-weight:600;font-size:.85rem">@p.User.FullName</div>
+                                <div style="color:var(--text-3);font-size:.74rem">@@@p.User.Username</div>
+                            </td>
+                            <td style="font-size:.84rem">
+                                <div>@p.Stage.Name</div>
+                                @if (!string.IsNullOrEmpty(p.Stage.GroupKey))
+                                {
+                                    var fasesGrupo = p.Stage.Tournament?.Stages
+                                        .Where(s => s.GroupKey == p.Stage.GroupKey)
+                                        .OrderBy(s => s.OrderNum).ToList();
+                                    if (fasesGrupo != null && fasesGrupo.Count > 1)
+                                    {
+                                        <div style="margin-top:.3rem;font-size:.73rem;color:#16a34a;font-weight:500">
+                                            Cubre @fasesGrupo.Count fases
+                                        </div>
+                                    }
+                                }
+                            </td>
+                            <td style="font-size:.84rem;color:var(--text-3)">@p.Stage.Tournament?.Name</td>
+                            <td style="font-weight:700;color:var(--text-1)">$@p.Amount</td>
+                            <td style="color:var(--text-3);font-size:.8rem">@p.CreatedAt.ToString("dd/MM/yyyy HH:mm")</td>
+                            <td>
+                                @if (!string.IsNullOrEmpty(p.VoucherPath))
+                                {
+                                    if (p.VoucherPath.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase))
+                                    {
+                                        <a href="@p.VoucherPath" target="_blank" class="btn btn-secondary btn-sm">Ver PDF</a>
+                                    }
+                                    else
+                                    {
+                                        <a href="@p.VoucherPath" target="_blank">
+                                            <img src="@p.VoucherPath" alt="Comprobante"
+                                                 style="width:56px;height:38px;object-fit:cover;border-radius:4px;border:1px solid var(--border)" />
+                                        </a>
+                                    }
+                                }
+                            </td>
+                            <td>
+                                <div style="display:flex;gap:.4rem;flex-wrap:wrap">
+                                    <form asp-action="ApprovePayment" asp-route-id="@p.Id" method="post" style="display:inline">
+                                        @Html.AntiForgeryToken()
+                                        <button type="submit" class="btn btn-sm"
+                                                style="background:var(--green);color:#fff;border:none;font-family:'Barlow Condensed',sans-serif;font-weight:700;text-transform:uppercase;letter-spacing:.06em">
+                                            Aprobar
+                                        </button>
+                                    </form>
+                                    <form asp-action="RejectPayment" asp-route-id="@p.Id" method="post" style="display:inline"
+                                          onsubmit="return confirm('¿Rechazar el comprobante de @p.User.FullName?')">
+                                        @Html.AntiForgeryToken()
+                                        <button type="submit" class="btn btn-danger btn-sm">Rechazar</button>
+                                    </form>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
 
-<div class="card" style="padding:0;overflow:hidden">
-    @if (!approved.Any())
-    {
-        <div class="empty-box" style="padding:1.4rem">
-            <p style="color:var(--text-3);margin:0">Sin comprobantes aprobados.</p>
-        </div>
-    }
-    else
-    {
-        <div class="table-wrap">
-            <table class="lb-table">
-                <thead>
-                    <tr>
-                        <th>Participante</th>
-                        <th>Fase / Torneo</th>
-                        <th>Monto</th>
-                        <th>Fecha</th>
-                        <th>Notas</th>
-                        <th>Comprobante</th>
-                    </tr>
-                </thead>
-                <tbody>
-                @foreach (var p in approved)
-                {
-                    <tr>
-                        <td>
-                            <div style="font-weight:600;font-size:.85rem">@p.User.FullName</div>
-                            <div style="color:var(--text-3);font-size:.74rem">@@@p.User.Username</div>
-                        </td>
-                        <td style="font-size:.84rem">
-                            <div>@p.Stage.Name</div>
-                            <div style="color:var(--text-3);font-size:.75rem">@p.Stage.Tournament?.Name</div>
-                        </td>
-                        <td style="font-weight:700;color:var(--text-1)">$@p.Amount</td>
-                        <td style="color:var(--text-3);font-size:.8rem">@p.CreatedAt.ToString("dd/MM/yyyy HH:mm")</td>
-                        <td style="color:var(--text-3);font-size:.82rem">@(p.Notes ?? "—")</td>
-                        <td>
-                            @if (!string.IsNullOrEmpty(p.VoucherPath))
-                            {
-                                if (p.VoucherPath.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase))
+    <div style="margin:1.2rem 0 .6rem">
+        <span class="sec-label" style="margin-bottom:0">Aprobados</span>
+    </div>
+
+    <div class="card" style="padding:0;overflow:hidden">
+        @if (!approved.Any())
+        {
+            <div class="empty-box" style="padding:1.4rem">
+                <p style="color:var(--text-3);margin:0">Sin comprobantes aprobados.</p>
+            </div>
+        }
+        else
+        {
+            <div class="table-wrap">
+                <table class="lb-table">
+                    <thead>
+                        <tr>
+                            <th>Participante</th>
+                            <th>Fase</th>
+                            <th>Torneo</th>
+                            <th>Monto</th>
+                            <th>Fecha</th>
+                            <th>Notas</th>
+                            <th>Comprobante</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    @foreach (var p in approved)
+                    {
+                        <tr>
+                            <td>
+                                <div style="font-weight:600;font-size:.85rem">@p.User.FullName</div>
+                                <div style="color:var(--text-3);font-size:.74rem">@@@p.User.Username</div>
+                            </td>
+                            <td style="font-size:.84rem">@p.Stage.Name</td>
+                            <td style="font-size:.84rem;color:var(--text-3)">@p.Stage.Tournament?.Name</td>
+                            <td style="font-weight:700;color:var(--text-1)">$@p.Amount</td>
+                            <td style="color:var(--text-3);font-size:.8rem">@p.CreatedAt.ToString("dd/MM/yyyy HH:mm")</td>
+                            <td style="color:var(--text-3);font-size:.82rem">@(p.Notes ?? "—")</td>
+                            <td>
+                                @if (!string.IsNullOrEmpty(p.VoucherPath))
                                 {
-                                    <a href="@p.VoucherPath" target="_blank" class="btn btn-secondary btn-sm">Ver PDF</a>
+                                    if (p.VoucherPath.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase))
+                                    {
+                                        <a href="@p.VoucherPath" target="_blank" class="btn btn-secondary btn-sm">Ver PDF</a>
+                                    }
+                                    else
+                                    {
+                                        <a href="@p.VoucherPath" target="_blank">
+                                            <img src="@p.VoucherPath" alt="Comprobante"
+                                                 style="width:56px;height:38px;object-fit:cover;border-radius:4px;border:1px solid var(--border)" />
+                                        </a>
+                                    }
                                 }
-                                else
-                                {
-                                    <a href="@p.VoucherPath" target="_blank">
-                                        <img src="@p.VoucherPath" alt="Comprobante"
-                                             style="width:56px;height:38px;object-fit:cover;border-radius:4px;border:1px solid var(--border)" />
-                                    </a>
-                                }
-                            }
-                        </td>
-                    </tr>
-                }
-                </tbody>
-            </table>
-        </div>
-    }
-</div>
+                            </td>
+                        </tr>
+                    }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
+}

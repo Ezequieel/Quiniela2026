@@ -6,20 +6,29 @@ using QuinielaApp.Models;
 namespace QuinielaApp.Services
 {
     /// <summary>
-    /// Sistema de puntos NO ACUMULATIVO — se otorga el mayor nivel alcanzado:
+    /// Sistema de puntos ACUMULATIVO:
     ///
-    ///   5 pts — Marcador exacto (ambos goles correctos + resultado correcto)
-    ///   2 pts — Solo resultado correcto (quién gana/empata)
-    ///   0 pts — No acertó nada
+    /// Liga/Grupos:
+    ///   5 pts — Marcador exacto
+    ///   2 pts — Solo resultado correcto
+    ///   0 pts — Nada
     ///
+    /// Eliminatorias (acumulativo):
+    ///   5 pts — Resultado al 90' (marcador exacto o solo resultado)
+    ///  +2 pts — Quién clasifica correcto
+    ///  +1 pt  — Acertó que se definió en penaltis
+    ///   0 pts — Nada
+    ///
+    /// Si no hubo extensión (FT normal) y acertó el resultado, los +2 de
+    /// clasificado se otorgan automáticamente (el ganador al 90' clasifica).
     /// </summary>
     public class PredictionService
     {
         private readonly AppDbContext _db;
         private readonly ILogger<PredictionService> _log;
 
-        private const int PTS_EXACT   = 5;   // marcador exacto
-        private const int PTS_RESULT  = 2;   // solo resultado
+        private const int PTS_EXACT   = 5;  // liga: marcador exacto
+        private const int PTS_RESULT  = 2;  // liga: solo resultado
         private const int PTS_NOTHING = 0;
 
         public PredictionService(AppDbContext db, ILogger<PredictionService> log)
@@ -129,28 +138,76 @@ namespace QuinielaApp.Services
                 .Select(m => m.Id)
                 .ToListAsync();
 
+            bool isKnockout = stage!.Type != StageType.League && stage.Type != StageType.GroupStage;
+
             foreach (var uid in participants)
             {
                 int totalPts = 0, resultHits = 0, scoreHits = 0;
 
                 foreach (var match in finishedMatches)
                 {
-                    var actual = ApiFootballService.GetResult(match.HomeScore, match.AwayScore);
-                    if (actual == null) continue;
+                    if (!match.HomeScore.HasValue || !match.AwayScore.HasValue) continue;
+
+                    string actual;
+                    if (match.HomeScore > match.AwayScore)      actual = "Home";
+                    else if (match.HomeScore < match.AwayScore) actual = "Away";
+                    else                                         actual = "Draw";
+
                     var pred = await _db.Predictions
                         .FirstOrDefaultAsync(p => p.UserId == uid && p.MatchId == match.Id);
                     if (pred == null) continue;
 
-                    bool resultOk = pred.ResultPrediction == actual;
-                    bool scoreOk  = pred.HomeScorePred == match.HomeScore &&
-                                    pred.AwayScorePred == match.AwayScore;
+                    bool resultOk = string.Equals(
+                        pred.ResultPrediction.ToString().Trim(), actual,
+                        StringComparison.OrdinalIgnoreCase);
+                    bool scoreOk = pred.HomeScorePred == match.HomeScore &&
+                                   pred.AwayScorePred == match.AwayScore;
+
+                    _log.LogInformation(
+                        "Partido {Id}: {Home}-{Away} pred={Pred} actual={Actual} ok={Ok}",
+                        match.Id, match.HomeScore, match.AwayScore,
+                        pred.ResultPrediction, actual, resultOk);
+
+                    bool huboExtension = match.ApiStatus == "AET" || match.ApiStatus == "PEN";
+                    bool huboPenaltis  = match.ApiStatus == "PEN";
+
                     pred.ResultCorrect = resultOk;
                     pred.ScoreCorrect  = scoreOk;
 
-                    int pts;
-                    if (scoreOk)       { pts = PTS_EXACT;  scoreHits++;  resultHits++; }
-                    else if (resultOk) { pts = PTS_RESULT; resultHits++; }
-                    else               { pts = PTS_NOTHING; }
+                    int pts = PTS_NOTHING;
+
+                    if (isKnockout)
+                    {
+                        if (scoreOk || resultOk)
+                        {
+                            pts += 5;
+                            resultHits++;
+                            if (scoreOk) scoreHits++;
+
+                            if (huboExtension)
+                            {
+                                bool qualifierOk = match.Qualifier != null
+                                    && pred.QualifierPred != null
+                                    && string.Equals(pred.QualifierPred.Trim(), match.Qualifier,
+                                                     StringComparison.OrdinalIgnoreCase);
+                                if (qualifierOk)
+                                {
+                                    pts += 2;
+                                    if (huboPenaltis && pred.PenaltyPred == true) pts += 1;
+                                }
+                            }
+                            else if (resultOk)
+                            {
+                                pts += 2; // clasificado automático cuando ganó en 90'
+                            }
+                        }
+                    }
+                    else
+                    {
+                        if (scoreOk)       { pts = PTS_EXACT;   scoreHits++; resultHits++; }
+                        else if (resultOk) { pts = PTS_RESULT;  resultHits++; }
+                    }
+
                     pred.PointsEarned = pts;
                     totalPts += pts;
                 }
@@ -263,35 +320,81 @@ namespace QuinielaApp.Services
                 .Select(s => s.Id)
                 .ToListAsync();
 
+            bool stageIsKnockout = stage.Type != StageType.League && stage.Type != StageType.GroupStage;
+
             foreach (var uid in participants)
             {
-int totalPts = 0, resultHits = 0, scoreHits = 0, total = 0;
+                int totalPts = 0, resultHits = 0, scoreHits = 0, total = 0;
 
                 foreach (var match in stage.Matches.Where(m => m.Status == "FT"))
                 {
-                    var actual = ApiFootballService.GetResult(match.HomeScore, match.AwayScore);
-                    if (actual == null) continue;
+                    if (!match.HomeScore.HasValue || !match.AwayScore.HasValue) continue;
+
+                    string actual;
+                    if (match.HomeScore > match.AwayScore)      actual = "Home";
+                    else if (match.HomeScore < match.AwayScore) actual = "Away";
+                    else                                         actual = "Draw";
+
                     var pred = match.Predictions.FirstOrDefault(p => p.UserId == uid);
                     if (pred == null) continue;
                     total++;
 
-                    bool resultOk = pred.ResultPrediction == actual;
-                    bool scoreOk  = pred.HomeScorePred == match.HomeScore &&
-                                    pred.AwayScorePred == match.AwayScore;
+                    bool resultOk = string.Equals(
+                        pred.ResultPrediction.ToString().Trim(), actual,
+                        StringComparison.OrdinalIgnoreCase);
+                    bool scoreOk = pred.HomeScorePred == match.HomeScore &&
+                                   pred.AwayScorePred == match.AwayScore;
+
+                    _log.LogInformation(
+                        "Partido {Id}: {Home}-{Away} pred={Pred} actual={Actual} ok={Ok}",
+                        match.Id, match.HomeScore, match.AwayScore,
+                        pred.ResultPrediction, actual, resultOk);
+
+                    bool huboExtension = match.ApiStatus == "AET" || match.ApiStatus == "PEN";
+                    bool huboPenaltis  = match.ApiStatus == "PEN";
+
                     pred.ResultCorrect = resultOk;
                     pred.ScoreCorrect  = scoreOk;
 
-                    // Sistema NO acumulativo: se toma el mayor nivel alcanzado
-                    int pts;
-                    if (scoreOk)        { pts = PTS_EXACT;   scoreHits++; resultHits++; }
-                    else if (resultOk)  { pts = PTS_RESULT;  resultHits++; }
-                    else                { pts = PTS_NOTHING; }
+                    int pts = PTS_NOTHING;
+
+                    if (stageIsKnockout)
+                    {
+                        if (scoreOk || resultOk)
+                        {
+                            pts += 5;
+                            resultHits++;
+                            if (scoreOk) scoreHits++;
+
+                            if (huboExtension)
+                            {
+                                bool qualifierOk = match.Qualifier != null
+                                    && pred.QualifierPred != null
+                                    && string.Equals(pred.QualifierPred.Trim(), match.Qualifier,
+                                                     StringComparison.OrdinalIgnoreCase);
+                                if (qualifierOk)
+                                {
+                                    pts += 2;
+                                    if (huboPenaltis && pred.PenaltyPred == true) pts += 1;
+                                }
+                            }
+                            else if (resultOk)
+                            {
+                                pts += 2; // clasificado automático cuando ganó en 90'
+                            }
+                        }
+                    }
+                    else
+                    {
+                        if (scoreOk)       { pts = PTS_EXACT;   scoreHits++; resultHits++; }
+                        else if (resultOk) { pts = PTS_RESULT;  resultHits++; }
+                    }
 
                     pred.PointsEarned = pts;
                     totalPts += pts;
 
-                    _log.LogDebug("U{U} - {H}vs{A}: exact={E} result={R} → {P}pts",
-                        uid, match.HomeTeam, match.AwayTeam, scoreOk, resultOk, pts);
+                    _log.LogDebug("U{U} - {H}vs{A}: exact={E} result={R} ext={X} pen={P} → {Pts}pts",
+                        uid, match.HomeTeam, match.AwayTeam, scoreOk, resultOk, huboExtension, huboPenaltis, pts);
                 }
 
                 // Guardar StageResult

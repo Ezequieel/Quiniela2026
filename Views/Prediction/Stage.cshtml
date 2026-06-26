@@ -1,8 +1,9 @@
 @model StageMatchesVm
 @{
     ViewData["Title"] = Model.StageName;
-    var isMundial = ViewBag.IsMundial as bool? ?? false;
-    var isUcl    = ViewBag.IsUcl     as bool? ?? false;
+    var isMundial      = ViewBag.IsMundial as bool? ?? false;
+    var isUcl          = ViewBag.IsUcl     as bool? ?? false;
+    var stageIsKnockout = Model.IsKnockout;
 }
 
 @if (isUcl)
@@ -75,10 +76,20 @@ else
 }
 
 <div class="pts-legend">
+@if (stageIsKnockout)
+{
+    <span>Marcador exacto al 90' — <strong>5 pts</strong></span>
+    <span>Solo resultado correcto — <strong>5 pts</strong></span>
+    <span>+ Quién clasifica correcto — <strong>+2 pts</strong></span>
+    <span>+ Acertaste que van a penaltis — <strong>+1 pt</strong></span>
+    <span style="color:var(--amarillo);font-size:.75rem">En eliminatorias resultado y marcador cuentan al 90'. Quién clasifica incluye ET y penaltis.</span>
+}
+else
+{
     <span>Marcador exacto — <strong>5 pts</strong></span>
     <span>Solo resultado correcto — <strong>2 pts</strong></span>
     <span>No aciertas nada — <strong>0 pts</strong></span>
-    <span style="color:var(--amarillo);font-size:.75rem">El puntaje no es acumulativo, se da el mayor nivel alcanzado</span>
+}
 </div>
 
 <div class="matches-grid">
@@ -190,6 +201,32 @@ else
                         </div>
                     </div>
                 </div>
+                @if (m.IsKnockout)
+                {
+                    <div class="qualifier-section" id="qual-@m.Id"
+                         style="@(m.UserResult == "Draw" ? "" : "display:none")">
+                        <div class="pred-label" style="margin-top:.6rem">
+                            ¿Quién clasifica?
+                            <span class="pts-bonus">+2 pts</span>
+                        </div>
+                        <div class="pred-result-btns" id="qual-btns-@m.Id">
+                            <button class="pred-btn @(m.UserQualifier == "Home" ? "sel-home" : "")"
+                                    onclick="setQualifier(@m.Id,'Home',this)">@m.HomeTeam</button>
+                            <button class="pred-btn @(m.UserQualifier == "Away" ? "sel-away" : "")"
+                                    onclick="setQualifier(@m.Id,'Away',this)">@m.AwayTeam</button>
+                        </div>
+                        <div class="pred-label" style="margin-top:.6rem">
+                            ¿Se definirá en penaltis?
+                            <span class="pts-bonus">+1 pt extra</span>
+                        </div>
+                        <div class="pred-result-btns" id="pen-btns-@m.Id">
+                            <button class="pred-btn @(m.UserPenaltyPred == true ? "sel-home" : "")"
+                                    onclick="setPenaltyPred(@m.Id, true, this)">Sí, penaltis</button>
+                            <button class="pred-btn @(m.UserPenaltyPred == false ? "sel-away" : "")"
+                                    onclick="setPenaltyPred(@m.Id, false, this)">No, tiempo extra</button>
+                        </div>
+                    </div>
+                }
                 <div class="pred-save-status" id="status-@m.Id"></div>
             }
             else if (m.UserResult != null)
@@ -205,8 +242,11 @@ else
                     <strong>@resLabel</strong>
                     @if (m.IsFinished)
                     {
-                        if (m.ResultCorrect == true) { <span class="result-ok">Correcto +2 pts</span> }
-                        else                         { <span class="result-no">Incorrecto</span> }
+                        if (m.ResultCorrect == true)
+                        {
+                            <span class="result-ok">Correcto @(m.IsKnockout ? "+5 pts" : "+2 pts")</span>
+                        }
+                        else { <span class="result-no">Incorrecto</span> }
                     }
                     @if (m.UserHomeScore.HasValue)
                     {
@@ -214,8 +254,30 @@ else
                             Marcador predicho: @m.UserHomeScore – @m.UserAwayScore
                             @if (m.IsFinished)
                             {
-                                if (m.ScoreCorrect == true) { <span class="result-ok">Exacto +5 pts</span> }
+                                if (m.ScoreCorrect == true) { <span class="result-ok">Exacto</span> }
                                 else                        { <span class="result-no">Incorrecto</span> }
+                            }
+                        </div>
+                    }
+                    @if (m.IsKnockout && m.IsFinished && m.HasExtension && m.UserQualifier != null)
+                    {
+                        var qualLabel = m.UserQualifier == "Home" ? m.HomeTeam : m.AwayTeam;
+                        var qualOk    = m.MatchQualifier != null &&
+                                        string.Equals(m.UserQualifier, m.MatchQualifier,
+                                            StringComparison.OrdinalIgnoreCase);
+                        <div class="score-pred-display">
+                            Clasifica predicho: @qualLabel
+                            @if (m.MatchQualifier != null)
+                            {
+                                if (qualOk) { <span class="result-ok">+2 pts</span> }
+                                else        { <span class="result-no">Incorrecto</span> }
+                            }
+                            @if (qualOk && m.HuboPenaltis)
+                            {
+                                if (m.UserPenaltyPred == true)
+                                { <span class="result-ok">Penaltis +1 pt</span> }
+                                else
+                                { <span class="result-no">Fue en penaltis — sin pt extra</span> }
                             }
                         </div>
                     }
@@ -248,7 +310,11 @@ else
 const preds = {};
 @foreach (var m in Model.Matches.Where(m => m.UserResult != null))
 {
-    <text>preds[@m.Id] = { result: '@m.UserResult', home: @(m.UserHomeScore?.ToString() ?? "null"), away: @(m.UserAwayScore?.ToString() ?? "null") };</text>
+    var pw = m.UserQualifier != null ? $", qualifier: '{m.UserQualifier}'" : "";
+    var pp = m.UserPenaltyPred.HasValue
+        ? $", penaltyPred: {(m.UserPenaltyPred.Value ? "true" : "false")}"
+        : "";
+    <text>preds[@m.Id] = { result: '@m.UserResult', home: @(m.UserHomeScore?.ToString() ?? "null"), away: @(m.UserAwayScore?.ToString() ?? "null")@pw@pp };</text>
 }
 
 function setPred(matchId, result, btn) {
@@ -259,7 +325,90 @@ function setPred(matchId, result, btn) {
     if (!preds[matchId]) preds[matchId] = {};
     preds[matchId].result = result;
     adjustScore(matchId, result);
+
+    // Mostrar/ocultar sección quién clasifica
+    const qualSection = document.getElementById(`qual-${matchId}`);
+    if (qualSection) {
+        qualSection.style.display = result === 'Draw' ? '' : 'none';
+        if (result !== 'Draw' && preds[matchId]) {
+            preds[matchId].qualifier   = null;
+            preds[matchId].penaltyPred = null;
+        }
+    }
+
     save(matchId);
+}
+
+function setQualifier(matchId, winner, btn) {
+    const group = document.getElementById(`qual-btns-${matchId}`);
+    group.querySelectorAll('.pred-btn').forEach(
+        b => b.className = b.className.replace(/sel-\w+/,'').trim());
+    btn.classList.add(`sel-${winner === 'Home' ? 'home' : 'away'}`);
+    if (!preds[matchId]) preds[matchId] = {};
+    preds[matchId].qualifier = winner;
+    saveQualifier(matchId);
+}
+
+async function saveQualifier(matchId) {
+    const p = preds[matchId];
+    if (!p?.qualifier) return;
+    const statusEl = document.getElementById(`status-${matchId}`);
+    if (statusEl) { statusEl.textContent = 'Guardando...'; statusEl.className = 'pred-save-status saving'; }
+    try {
+        const res = await fetch('/Prediction/SaveQualifier', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'RequestVerificationToken':
+                    document.querySelector('input[name=__RequestVerificationToken]')?.value ?? ''
+            },
+            body: JSON.stringify({ matchId, qualifier: p.qualifier })
+        });
+        const data = await res.json();
+        if (statusEl) {
+            statusEl.textContent = data.ok ? 'Guardado' : (data.msg ?? 'Error');
+            statusEl.className   = 'pred-save-status ' + (data.ok ? 'saved' : 'error');
+            setTimeout(() => { statusEl.textContent = ''; statusEl.className = 'pred-save-status'; }, 3000);
+        }
+    } catch {
+        if (statusEl) { statusEl.textContent = 'Error al guardar'; statusEl.className = 'pred-save-status error'; }
+    }
+}
+
+function setPenaltyPred(matchId, isPenalty, btn) {
+    const group = document.getElementById(`pen-btns-${matchId}`);
+    group.querySelectorAll('.pred-btn').forEach(
+        b => b.className = b.className.replace(/sel-\w+/,'').trim());
+    btn.classList.add(isPenalty ? 'sel-home' : 'sel-away');
+    if (!preds[matchId]) preds[matchId] = {};
+    preds[matchId].penaltyPred = isPenalty;
+    savePenaltyPred(matchId);
+}
+
+async function savePenaltyPred(matchId) {
+    const p = preds[matchId];
+    if (p?.penaltyPred === null || p?.penaltyPred === undefined) return;
+    const statusEl = document.getElementById(`status-${matchId}`);
+    if (statusEl) { statusEl.textContent = 'Guardando...'; statusEl.className = 'pred-save-status saving'; }
+    try {
+        const res = await fetch('/Prediction/SavePenaltyPred', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'RequestVerificationToken':
+                    document.querySelector('input[name=__RequestVerificationToken]')?.value ?? ''
+            },
+            body: JSON.stringify({ matchId, penaltyPred: p.penaltyPred })
+        });
+        const data = await res.json();
+        if (statusEl) {
+            statusEl.textContent = data.ok ? 'Guardado' : (data.msg ?? 'Error');
+            statusEl.className   = 'pred-save-status ' + (data.ok ? 'saved' : 'error');
+            setTimeout(() => { statusEl.textContent = ''; statusEl.className = 'pred-save-status'; }, 3000);
+        }
+    } catch {
+        if (statusEl) { statusEl.textContent = 'Error al guardar'; statusEl.className = 'pred-save-status error'; }
+    }
 }
 
 function adjustScore(matchId, result) {

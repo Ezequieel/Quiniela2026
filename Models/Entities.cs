@@ -100,6 +100,10 @@ namespace QuinielaApp.Models
         public bool  HasPenalty   { get; set; } = false;  // Penal en tiempo reglamentario
         public int?  FirstScorer  { get; set; }   // 1=Home, 2=Away (primer equipo en anotar)
         public bool  BothScored   { get; set; } = false;
+        // Status real de la API: "FT", "AET" o "PEN" — para saber si hubo ET/penaltis
+        public string? ApiStatus  { get; set; }
+        // Eliminatorias: quién clasificó al final (incluye ET y penaltis). "Home" | "Away"
+        public string? Qualifier  { get; set; }
 
         public ICollection<Prediction> Predictions { get; set; } = new List<Prediction>();
     }
@@ -192,6 +196,13 @@ namespace QuinielaApp.Models
         public bool? BothScoredPred { get; set; }   // Ambos equipos marcan
         public int?  TotalGoalsPred { get; set; }   // Suma total de goles
         public int?  GoalDiffPred   { get; set; }   // Diferencia de goles (signed)
+
+        // Predicción eliminatoria: quién clasifica cuando hay empate al 90' ("Home" | "Away")
+        public string? QualifierPred { get; set; }
+
+        // Predicción eliminatoria: si se definirá en penaltis (solo aplica si eligió empate)
+        // true = penaltis | false = tiempo extra | null = sin predicción
+        public bool? PenaltyPred { get; set; }
 
         // Resultado calculado
         public int   PointsEarned { get; set; } = 0;

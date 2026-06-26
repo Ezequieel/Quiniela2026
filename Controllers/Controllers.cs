@@ -446,13 +446,19 @@ namespace QuinielaApp.Controllers
                     CanPredict    = canPredThis,
                     HomeScore = m.HomeScore, AwayScore = m.AwayScore,
                     Status = m.Status, Elapsed = m.Elapsed,
-                    UserResult    = pred?.ResultPrediction.ToString(),
-                    UserHomeScore = pred?.HomeScorePred,
-                    UserAwayScore = pred?.AwayScorePred,
-                    ResultCorrect = pred?.ResultCorrect,
-                    ScoreCorrect  = pred?.ScoreCorrect,
-                    PointsEarned  = pred?.PointsEarned ?? 0,
-                    SpecialPoints = pred?.SpecialPoints ?? 0,
+                    UserResult        = pred?.ResultPrediction.ToString(),
+                    UserHomeScore     = pred?.HomeScorePred,
+                    UserAwayScore     = pred?.AwayScorePred,
+                    ResultCorrect     = pred?.ResultCorrect,
+                    ScoreCorrect      = pred?.ScoreCorrect,
+                    PointsEarned      = pred?.PointsEarned ?? 0,
+                    SpecialPoints     = pred?.SpecialPoints ?? 0,
+                    IsKnockout      = stage.Type != StageType.League && stage.Type != StageType.GroupStage,
+                    UserQualifier   = pred?.QualifierPred,
+                    UserPenaltyPred = pred?.PenaltyPred,
+                    MatchQualifier  = m.Qualifier,
+                    HasExtension    = m.ApiStatus == "AET" || m.ApiStatus == "PEN",
+                    HuboPenaltis    = m.ApiStatus == "PEN",
                     Special       = pred == null ? null : new SpecialPredVm
                     {
                         MatchId         = m.Id,
@@ -498,6 +504,7 @@ namespace QuinielaApp.Controllers
                 CanPredict     = stage.Status != StageStatus.Finished
                                && cards.Any(c => c.CanPredict),
                 IsPaid         = paid,
+                IsKnockout     = stage.Type != StageType.League && stage.Type != StageType.GroupStage,
                 Matches        = cards
             });
         }
@@ -508,6 +515,40 @@ namespace QuinielaApp.Controllers
             var (ok, msg) = await _predSvc.SaveAsync(
                 Uid, vm.MatchId, vm.ResultPred, vm.HomeScorePred, vm.AwayScorePred);
             return Json(new { ok, msg });
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> SaveQualifier([FromBody] SaveQualifierRequest req)
+        {
+            var uid  = Uid;
+            var pred = await _db.Predictions
+                .FirstOrDefaultAsync(p => p.UserId == uid && p.MatchId == req.MatchId);
+
+            if (pred == null)
+                return Json(new { ok = false, msg = "Registra primero tu predicción." });
+
+            pred.QualifierPred = req.Qualifier;
+            pred.UpdatedAt     = DateTime.UtcNow;
+            await _db.SaveChangesAsync();
+
+            return Json(new { ok = true });
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> SavePenaltyPred([FromBody] SavePenaltyPredRequest req)
+        {
+            var uid  = Uid;
+            var pred = await _db.Predictions
+                .FirstOrDefaultAsync(p => p.UserId == uid && p.MatchId == req.MatchId);
+
+            if (pred == null)
+                return Json(new { ok = false, msg = "Registra primero tu predicción." });
+
+            pred.PenaltyPred = req.PenaltyPred;
+            pred.UpdatedAt   = DateTime.UtcNow;
+            await _db.SaveChangesAsync();
+
+            return Json(new { ok = true });
         }
 
         [HttpPost]
@@ -550,6 +591,21 @@ namespace QuinielaApp.Controllers
             await _db.SaveChangesAsync();
             return Json(new { ok = true, msg = "Predicciones especiales guardadas." });
         }
+    }
+
+    // ════════════════════════════════════════════════════
+    //  QUALIFIER REQUEST — eliminatorias
+    // ════════════════════════════════════════════════════
+    public class SaveQualifierRequest
+    {
+        public int    MatchId   { get; set; }
+        public string Qualifier { get; set; } = string.Empty;
+    }
+
+    public class SavePenaltyPredRequest
+    {
+        public int  MatchId     { get; set; }
+        public bool PenaltyPred { get; set; }
     }
 
     // ════════════════════════════════════════════════════
@@ -915,7 +971,15 @@ namespace QuinielaApp.Controllers
         public async Task<IActionResult> SyncMatches(int id) // id = stageId
         {
             var (ok, msg, _) = await _syncSvc.SyncAsync(id);
-            TempData[ok ? "Success" : "Error"] = msg;
+            if (ok)
+            {
+                await _predSvc.CalculatePendingPointsAsync(id);
+                TempData["Success"] = "Sincronización y puntos actualizados.";
+            }
+            else
+            {
+                TempData["Error"] = msg;
+            }
             return RedirectToAction("Index");
         }
 
@@ -977,15 +1041,45 @@ namespace QuinielaApp.Controllers
         }
 
         // ── Ver pagos ─────────────────────────────────────
-        public async Task<IActionResult> Payments(int? stageId = null)
+        [HttpGet]
+        public async Task<IActionResult> Payments(int? stageId = null, string? status = null)
         {
+            var stages = await _db.Stages
+                .Include(s => s.Tournament)
+                .OrderBy(s => s.TournamentId)
+                .ThenBy(s => s.OrderNum)
+                .Select(s => new StageFilterVm
+                {
+                    Id             = s.Id,
+                    Name           = s.Name,
+                    TournamentName = s.Tournament.Name,
+                    Type           = s.Type.ToString()
+                })
+                .ToListAsync();
+
             var query = _db.Payments
                 .Include(p => p.User)
                 .Include(p => p.Stage).ThenInclude(s => s.Tournament)
                 .AsQueryable();
-            if (stageId.HasValue) query = query.Where(p => p.StageId == stageId);
+
+            if (stageId.HasValue)
+                query = query.Where(p => p.StageId == stageId);
+
+            if (!string.IsNullOrEmpty(status) && Enum.TryParse<PaymentStatus>(status, out var statusEnum))
+                query = query.Where(p => p.Status == statusEnum);
+
             var payments = await query.OrderByDescending(p => p.CreatedAt).ToListAsync();
-            ViewBag.StageId = stageId;
+
+            ViewBag.Stages         = stages;
+            ViewBag.SelectedStage  = stageId;
+            ViewBag.SelectedStatus = status;
+            ViewBag.TotalPagos     = payments.Count;
+            ViewBag.Pendientes     = payments.Count(p => p.Status == PaymentStatus.Pending);
+            ViewBag.Aprobados      = payments.Count(p => p.Status == PaymentStatus.Approved);
+            ViewBag.BolsaFiltrada  = payments
+                .Where(p => p.Status == PaymentStatus.Approved)
+                .Sum(p => p.Amount);
+
             return View(payments);
         }
 

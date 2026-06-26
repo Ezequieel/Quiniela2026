@@ -18,6 +18,10 @@ namespace QuinielaApp.BackgroundServices
         private const int ActiveIntervalSeconds = 30;
         private const int IdleIntervalSeconds   = 300;
 
+        // Rate-limit por partido: evita llamar GetFixtureDetailAsync más de una
+        // vez cada 5 min por partido. Persiste mientras el proceso esté vivo.
+        private readonly Dictionary<int, DateTime> _lastFixtureDetailCall = new();
+
         public ScoreSyncBackgroundService(IServiceProvider services, ILogger<ScoreSyncBackgroundService> log)
         { _services = services; _log = log; }
 
@@ -120,41 +124,82 @@ namespace QuinielaApp.BackgroundServices
                 {
                     var prev      = match.Status;
                     var apiStatus = live.Fixture.Status.Short;
-                    match.HomeScore   = live.Goals.Home;
-                    match.AwayScore   = live.Goals.Away;
+
+                    // AET/PEN: usar score.fulltime (marcador al 90') para cálculo justo
+                    if (apiStatus == "AET" || apiStatus == "PEN")
+                    {
+                        match.HomeScore = live.Score?.Fulltime?.Home ?? live.Goals.Home;
+                        match.AwayScore = live.Score?.Fulltime?.Away ?? live.Goals.Away;
+                        match.ApiStatus = apiStatus;
+                        if (live.Teams.Home.Winner.HasValue)
+                            match.Qualifier = live.Teams.Home.Winner == true ? "Home" : "Away";
+                    }
+                    else
+                    {
+                        match.HomeScore = live.Goals.Home;
+                        match.AwayScore = live.Goals.Away;
+                        if (apiStatus == "FT") match.ApiStatus = "FT";
+                    }
+
                     match.Status      = ApiFootballService.NormalizeStatus(
                         apiStatus, live.Fixture.Status.Elapsed, match.MatchDate, match.HomeScore, match.AwayScore);
                     match.Elapsed     = live.Fixture.Status.Elapsed;
                     match.LastUpdated = now;
                     updated++;
-                    if (match.Status == "FT" && apiStatus != "FT")
+                    if (match.Status == "FT" && apiStatus != "FT" && apiStatus != "AET" && apiStatus != "PEN")
                         _log.LogWarning("{H} vs {A}: forzado a FT (API status={S}, elapsed={E})",
                             match.HomeTeam, match.AwayTeam, apiStatus, live.Fixture.Status.Elapsed);
                     if (prev != match.Status)
-                        _log.LogInformation("{H} vs {A}: {P}→{N} ({Hs}-{As})",
-                            match.HomeTeam, match.AwayTeam, prev, match.Status,
+                        _log.LogInformation("{H} vs {A}: {P}→{N} apiStatus={S} ({Hs}-{As})",
+                            match.HomeTeam, match.AwayTeam, prev, match.Status, apiStatus,
                             match.HomeScore, match.AwayScore);
                 }
-                else if (match.Status != "NS" || match.MatchDate <= now.AddMinutes(-100))
+                else
                 {
+                    // No llamar para partidos que aún no comienzan en los próximos 30 min
+                    if (match.Status == "NS" && match.MatchDate > now.AddMinutes(30))
+                        continue;
+
+                    // Rate limit: máximo una llamada cada 5 min por partido
+                    var lastCall = _lastFixtureDetailCall.GetValueOrDefault(match.ApiMatchId, DateTime.MinValue);
+                    if ((now - lastCall).TotalMinutes < 5)
+                        continue;
+
+                    _lastFixtureDetailCall[match.ApiMatchId] = now;
+
                     var detail = await api.GetFixtureDetailAsync(match.ApiMatchId);
                     if (detail != null)
                     {
                         var prev      = match.Status;
                         var apiStatus = detail.Fixture.Status.Short;
-                        match.HomeScore   = detail.Goals.Home;
-                        match.AwayScore   = detail.Goals.Away;
+
+                        // AET/PEN: usar score.fulltime (marcador al 90') para cálculo justo
+                        if (apiStatus == "AET" || apiStatus == "PEN")
+                        {
+                            match.HomeScore = detail.Score?.Fulltime?.Home ?? detail.Goals.Home;
+                            match.AwayScore = detail.Score?.Fulltime?.Away ?? detail.Goals.Away;
+                            match.ApiStatus = apiStatus;
+                            if (detail.Teams.Home.Winner.HasValue)
+                                match.Qualifier = detail.Teams.Home.Winner == true ? "Home" : "Away";
+                        }
+                        else
+                        {
+                            match.HomeScore = detail.Goals.Home;
+                            match.AwayScore = detail.Goals.Away;
+                            if (apiStatus == "FT") match.ApiStatus = "FT";
+                        }
+
                         match.Status      = ApiFootballService.NormalizeStatus(
                             apiStatus, detail.Fixture.Status.Elapsed, match.MatchDate, match.HomeScore, match.AwayScore);
                         match.Elapsed     = detail.Fixture.Status.Elapsed;
                         match.LastUpdated = now;
                         updated++;
-                        if (match.Status == "FT" && apiStatus != "FT")
+                        if (match.Status == "FT" && apiStatus != "FT" && apiStatus != "AET" && apiStatus != "PEN")
                             _log.LogWarning("{H} vs {A}: forzado a FT (API status={S}, elapsed={E})",
                                 match.HomeTeam, match.AwayTeam, apiStatus, detail.Fixture.Status.Elapsed);
                         if (prev != match.Status)
-                            _log.LogInformation("{H} vs {A} → {S} ({Hs}-{As})",
-                                match.HomeTeam, match.AwayTeam, match.Status,
+                            _log.LogInformation("{H} vs {A} → {S} apiStatus={Api} ({Hs}-{As})",
+                                match.HomeTeam, match.AwayTeam, match.Status, apiStatus,
                                 match.HomeScore, match.AwayScore);
                     }
                 }
