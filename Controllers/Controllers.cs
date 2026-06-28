@@ -429,12 +429,41 @@ namespace QuinielaApp.Controllers
                 .OrderBy(m => m.MatchDate)
                 .ToListAsync();
 
-            var now   = DateTime.UtcNow;
+            var now = DateTime.UtcNow;
+
+            // Batch query: estadísticas del grupo para partidos cerrados
+            var closedIds = matches
+                .Where(m => now >= m.MatchDate.AddMinutes(-15))
+                .Select(m => m.Id).ToList();
+
+            var statsByMatch = new Dictionary<int, GroupStats>();
+            if (closedIds.Any())
+            {
+                var predsFlat = await _db.Predictions
+                    .Where(p => closedIds.Contains(p.MatchId))
+                    .Select(p => new { p.MatchId, p.ResultPrediction })
+                    .ToListAsync();
+
+                foreach (var grp in predsFlat.GroupBy(p => p.MatchId))
+                {
+                    var tot = grp.Count();
+                    statsByMatch[grp.Key] = new GroupStats
+                    {
+                        Total   = tot,
+                        HomePct = (int)Math.Round(grp.Count(p => p.ResultPrediction == MatchResult.Home) * 100.0 / tot),
+                        DrawPct = (int)Math.Round(grp.Count(p => p.ResultPrediction == MatchResult.Draw) * 100.0 / tot),
+                        AwayPct = (int)Math.Round(grp.Count(p => p.ResultPrediction == MatchResult.Away) * 100.0 / tot),
+                    };
+                }
+            }
+
             var cards = matches.Select(m => {
                 var pred        = m.Predictions.FirstOrDefault();
                 // MatchDate ya viene en UTC real (ver ApiFootballService.MapToMatch)
                 var matchDlUtc  = m.MatchDate.AddMinutes(-15);
                 var canPredThis = now < matchDlUtc;
+
+                statsByMatch.TryGetValue(m.Id, out var groupStats);
                 return new MatchPredVm
                 {
                     Id            = m.Id, ApiMatchId = m.ApiMatchId,
@@ -459,6 +488,7 @@ namespace QuinielaApp.Controllers
                     MatchQualifier  = m.Qualifier,
                     HasExtension    = m.ApiStatus == "AET" || m.ApiStatus == "PEN",
                     HuboPenaltis    = m.ApiStatus == "PEN",
+                    GroupStats      = groupStats,
                     Special       = pred == null ? null : new SpecialPredVm
                     {
                         MatchId         = m.Id,

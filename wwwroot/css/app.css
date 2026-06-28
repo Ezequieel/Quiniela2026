@@ -1503,3 +1503,61 @@ textarea.input, textarea.form-control { resize: vertical; min-height: 90px; }
   letter-spacing: .06em;
   color: #888;
 }
+
+/* ── Estadísticas del grupo (group-stats) ── */
+.group-stats {
+  padding: 10px 12px;
+  background: rgba(201,168,76,.06);
+  border: 1px solid rgba(201,168,76,.15);
+  border-radius: 4px;
+  margin-bottom: 10px;
+}
+.group-stats-label {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  color: #888;
+  margin-bottom: 8px;
+}
+.group-stats-total { color: #C9A84C; }
+.group-stat-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 5px;
+}
+.group-stat-row:last-child { margin-bottom: 0; }
+.group-stat-team {
+  font-size: 11px;
+  font-weight: 600;
+  color: #555;
+  width: 80px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex-shrink: 0;
+}
+.group-stat-bar-wrap {
+  flex: 1;
+  height: 6px;
+  background: #EDE8DF;
+  border-radius: 3px;
+  overflow: hidden;
+}
+.group-stat-bar {
+  height: 100%;
+  border-radius: 3px;
+  transition: width .4s ease;
+}
+.group-stat-bar.home { background: #C8001E; }
+.group-stat-bar.draw { background: #C9A84C; }
+.group-stat-bar.away { background: #3B6FD4; }
+.group-stat-pct {
+  font-size: 11px;
+  font-weight: 700;
+  color: #555;
+  width: 32px;
+  text-align: right;
+  flex-shrink: 0;
+}

@@ -186,7 +186,8 @@ namespace QuinielaApp.ViewModels
         public string?  MatchQualifier  { get; set; }  // "Home" | "Away" — quién clasificó de verdad
         public bool     HasExtension    { get; set; }  // true si ApiStatus == "AET" o "PEN"
         public bool     HuboPenaltis    { get; set; }  // true si ApiStatus == "PEN"
-        public SpecialPredVm? Special    { get; set; }
+        public SpecialPredVm?    Special    { get; set; }
+        public GroupStats?       GroupStats { get; set; }
 
         public bool IsLive     => Status is "1H" or "HT" or "2H" or "ET" or "P";
         public bool IsFinished => Status == "FT";
@@ -201,6 +202,14 @@ namespace QuinielaApp.ViewModels
             "NS"  => TimeHelper.Format(MatchDate, "dd/MM HH:mm"),
             _     => Status
         };
+    }
+
+    public class GroupStats
+    {
+        public int Total   { get; set; }
+        public int HomePct { get; set; }
+        public int DrawPct { get; set; }
+        public int AwayPct { get; set; }
     }
 
     public class SavePredictionVm

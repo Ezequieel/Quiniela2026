@@ -166,6 +166,38 @@ else
             </div>
         </div>
 
+        @if (m.GroupStats != null)
+        {
+            <div class="group-stats">
+                <div class="group-stats-label">
+                    El grupo predijo <span class="group-stats-total">(@m.GroupStats.Total predicciones)</span>
+                </div>
+                <div class="group-stats-bars">
+                    <div class="group-stat-row">
+                        <span class="group-stat-team">@m.HomeTeam</span>
+                        <div class="group-stat-bar-wrap">
+                            <div class="group-stat-bar home" style="width:@(m.GroupStats.HomePct)%"></div>
+                        </div>
+                        <span class="group-stat-pct">@(m.GroupStats.HomePct)%</span>
+                    </div>
+                    <div class="group-stat-row">
+                        <span class="group-stat-team">Empate</span>
+                        <div class="group-stat-bar-wrap">
+                            <div class="group-stat-bar draw" style="width:@(m.GroupStats.DrawPct)%"></div>
+                        </div>
+                        <span class="group-stat-pct">@(m.GroupStats.DrawPct)%</span>
+                    </div>
+                    <div class="group-stat-row">
+                        <span class="group-stat-team">@m.AwayTeam</span>
+                        <div class="group-stat-bar-wrap">
+                            <div class="group-stat-bar away" style="width:@(m.GroupStats.AwayPct)%"></div>
+                        </div>
+                        <span class="group-stat-pct">@(m.GroupStats.AwayPct)%</span>
+                    </div>
+                </div>
+            </div>
+        }
+
         <div class="pred-section">
             @if (!m.IsFinished && m.CanPredict)
             {
@@ -201,7 +233,7 @@ else
                         </div>
                     </div>
                 </div>
-                @if (m.IsKnockout)
+                @if (m.IsKnockout && !m.IsFinished && m.CanPredict)
                 {
                     <div class="qualifier-section" id="qual-@m.Id"
                          style="@(m.UserResult == "Draw" ? "" : "display:none")">
@@ -310,11 +342,18 @@ else
 const preds = {};
 @foreach (var m in Model.Matches.Where(m => m.UserResult != null))
 {
-    var pw = m.UserQualifier != null ? $", qualifier: '{m.UserQualifier}'" : "";
-    var pp = m.UserPenaltyPred.HasValue
-        ? $", penaltyPred: {(m.UserPenaltyPred.Value ? "true" : "false")}"
-        : "";
-    <text>preds[@m.Id] = { result: '@m.UserResult', home: @(m.UserHomeScore?.ToString() ?? "null"), away: @(m.UserAwayScore?.ToString() ?? "null")@pw@pp };</text>
+    var qualVal = m.UserQualifier != null ? $"'{m.UserQualifier}'" : "null";
+    var penVal  = m.UserPenaltyPred.HasValue
+        ? (m.UserPenaltyPred.Value ? "true" : "false") : "null";
+    var homeVal = m.UserHomeScore?.ToString() ?? "null";
+    var awayVal = m.UserAwayScore?.ToString() ?? "null";
+    <text>preds[@m.Id] = {
+    result: '@m.UserResult',
+    home: @Html.Raw(homeVal),
+    away: @Html.Raw(awayVal),
+    qualifier: @Html.Raw(qualVal),
+    penaltyPred: @Html.Raw(penVal)
+};</text>
 }
 
 function setPred(matchId, result, btn) {
