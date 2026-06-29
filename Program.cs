@@ -36,6 +36,12 @@ builder.Services.AddScoped<EmailService>();
 // Background service de sincronización automática
 builder.Services.AddHostedService<ScoreSyncBackgroundService>();
 
+// Persistir claves de Data Protection en disco para que los antiforgery tokens
+// sobrevivan reinicios del servicio (en prod: /var/www/quiniela/keys).
+builder.Services.AddDataProtection()
+    .PersistKeysToFileSystem(new DirectoryInfo("/var/www/quiniela/keys"))
+    .SetApplicationName("QuinielaApp");
+
 var app = builder.Build();
 
 // Migraciones + seed del admin (contraseña en texto plano)
