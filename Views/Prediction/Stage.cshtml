@@ -298,20 +298,27 @@ else
                                         string.Equals(m.UserQualifier, m.MatchQualifier,
                                             StringComparison.OrdinalIgnoreCase);
                         <div class="score-pred-display">
-                            Clasifica predicho: @qualLabel
+                            Clasifica: @qualLabel
                             @if (m.MatchQualifier != null)
                             {
                                 if (qualOk) { <span class="result-ok">+2 pts</span> }
                                 else        { <span class="result-no">Incorrecto</span> }
                             }
-                            @if (qualOk && m.HuboPenaltis)
-                            {
-                                if (m.UserPenaltyPred == true)
-                                { <span class="result-ok">Penaltis +1 pt</span> }
-                                else
-                                { <span class="result-no">Fue en penaltis — sin pt extra</span> }
-                            }
                         </div>
+                        @if (m.HuboPenaltis && m.UserPenaltyPred.HasValue)
+                        {
+                            <div class="score-pred-display">
+                                Penaltis: @(m.UserPenaltyPred == true ? "Sí" : "No")
+                                @if (m.UserPenaltyPred == true && qualOk)
+                                {
+                                    <span class="result-ok">+1 pt</span>
+                                }
+                                else if (m.UserPenaltyPred == false)
+                                {
+                                    <span class="result-no">Fue en penaltis</span>
+                                }
+                            </div>
+                        }
                     }
                     @if (m.IsFinished && m.PointsEarned > 0)
                     {

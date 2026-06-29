@@ -13,14 +13,18 @@ namespace QuinielaApp.Services
     ///   2 pts — Solo resultado correcto
     ///   0 pts — Nada
     ///
-    /// Eliminatorias (acumulativo):
-    ///   5 pts — Resultado al 90' (marcador exacto o solo resultado)
-    ///  +2 pts — Quién clasifica correcto
-    ///  +1 pt  — Acertó que se definió en penaltis
+    /// Eliminatorias:
+    ///   5 pts — Marcador exacto solo
+    ///   7 pts — Marcador exacto + clasificado correcto
+    ///   8 pts — Marcador exacto + clasificado + penaltis correcto
+    ///   2 pts — Solo resultado correcto
+    ///   4 pts — Resultado correcto + clasificado correcto
+    ///   5 pts — Resultado correcto + clasificado + penaltis correcto
     ///   0 pts — Nada
     ///
-    /// Si no hubo extensión (FT normal) y acertó el resultado, los +2 de
-    /// clasificado se otorgan automáticamente (el ganador al 90' clasifica).
+    /// Los +2 de clasificado y +1 de penaltis SOLO se suman si el usuario
+    /// eligió QualifierPred != null (elección activa). Sin elección, no hay
+    /// bonus aunque el resultado sea correcto. Sin clasificado automático.
     /// </summary>
     public class PredictionService
     {
@@ -178,27 +182,19 @@ namespace QuinielaApp.Services
 
                     if (isKnockout)
                     {
-                        if (scoreOk || resultOk)
-                        {
-                            pts += 5;
-                            resultHits++;
-                            if (scoreOk) scoreHits++;
+                        if (scoreOk)       { pts = 5; scoreHits++; resultHits++; }
+                        else if (resultOk) { pts = 2; resultHits++; }
 
-                            if (huboExtension)
+                        if (pts > 0 && huboExtension &&
+                            pred.QualifierPred != null && match.Qualifier != null)
+                        {
+                            bool qualifierOk = string.Equals(
+                                pred.QualifierPred.Trim(), match.Qualifier,
+                                StringComparison.OrdinalIgnoreCase);
+                            if (qualifierOk)
                             {
-                                bool qualifierOk = match.Qualifier != null
-                                    && pred.QualifierPred != null
-                                    && string.Equals(pred.QualifierPred.Trim(), match.Qualifier,
-                                                     StringComparison.OrdinalIgnoreCase);
-                                if (qualifierOk)
-                                {
-                                    pts += 2;
-                                    if (huboPenaltis && pred.PenaltyPred == true) pts += 1;
-                                }
-                            }
-                            else if (resultOk)
-                            {
-                                pts += 2; // clasificado automático cuando ganó en 90'
+                                pts += 2;
+                                if (huboPenaltis && pred.PenaltyPred == true) pts += 1;
                             }
                         }
                     }
@@ -360,27 +356,19 @@ namespace QuinielaApp.Services
 
                     if (stageIsKnockout)
                     {
-                        if (scoreOk || resultOk)
-                        {
-                            pts += 5;
-                            resultHits++;
-                            if (scoreOk) scoreHits++;
+                        if (scoreOk)       { pts = 5; scoreHits++; resultHits++; }
+                        else if (resultOk) { pts = 2; resultHits++; }
 
-                            if (huboExtension)
+                        if (pts > 0 && huboExtension &&
+                            pred.QualifierPred != null && match.Qualifier != null)
+                        {
+                            bool qualifierOk = string.Equals(
+                                pred.QualifierPred.Trim(), match.Qualifier,
+                                StringComparison.OrdinalIgnoreCase);
+                            if (qualifierOk)
                             {
-                                bool qualifierOk = match.Qualifier != null
-                                    && pred.QualifierPred != null
-                                    && string.Equals(pred.QualifierPred.Trim(), match.Qualifier,
-                                                     StringComparison.OrdinalIgnoreCase);
-                                if (qualifierOk)
-                                {
-                                    pts += 2;
-                                    if (huboPenaltis && pred.PenaltyPred == true) pts += 1;
-                                }
-                            }
-                            else if (resultOk)
-                            {
-                                pts += 2; // clasificado automático cuando ganó en 90'
+                                pts += 2;
+                                if (huboPenaltis && pred.PenaltyPred == true) pts += 1;
                             }
                         }
                     }
