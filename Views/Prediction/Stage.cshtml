@@ -276,7 +276,7 @@ else
                     {
                         if (m.ResultCorrect == true)
                         {
-                            <span class="result-ok">Correcto @(m.IsKnockout ? "+5 pts" : "+2 pts")</span>
+                            <span class="result-ok">Correcto +2 pts</span>
                         }
                         else { <span class="result-no">Incorrecto</span> }
                     }
@@ -286,7 +286,7 @@ else
                             Marcador predicho: @m.UserHomeScore – @m.UserAwayScore
                             @if (m.IsFinished)
                             {
-                                if (m.ScoreCorrect == true) { <span class="result-ok">Exacto</span> }
+                                if (m.ScoreCorrect == true) { <span class="result-ok">Exacto +5 pts</span> }
                                 else                        { <span class="result-no">Incorrecto</span> }
                             }
                         </div>
