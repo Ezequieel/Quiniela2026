@@ -27,6 +27,14 @@ namespace QuinielaApp.Services
             string? predQualifier,
             bool?   predPenalty)
         {
+            // LOG TEMPORAL DE DEPURACIÓN — quitar después
+            Console.WriteLine(
+                $"[PTS-DEBUG] home={matchHomeScore} away={matchAwayScore} " +
+                $"apiStatus='{matchApiStatus}' qualifier='{matchQualifier}' " +
+                $"isKnockout={isKnockout} predResult='{predResult}' " +
+                $"predHome={predHomeScore} predAway={predAwayScore} " +
+                $"predQualifier='{predQualifier}' predPenalty={predPenalty}");
+
             // Paso A — resultado real al 90'
             string actual;
             if      (matchHomeScore > matchAwayScore) actual = "Home";
@@ -65,6 +73,10 @@ namespace QuinielaApp.Services
                     }
                 }
             }
+
+            // LOG TEMPORAL DE DEPURACIÓN — quitar después
+            Console.WriteLine(
+                $"[PTS-DEBUG] → pts={pts} resultOk={resultOk} scoreOk={scoreOk}");
 
             // Paso E — resultado final
             return new PointsResult
