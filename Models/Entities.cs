@@ -90,7 +90,8 @@ namespace QuinielaApp.Models
         public int?     AwayScore    { get; set; }
         public string   Status       { get; set; } = "NS"; // NS 1H HT 2H FT
         public int?     Elapsed      { get; set; }
-        public DateTime? LastUpdated { get; set; }
+        public DateTime? LastUpdated        { get; set; }
+        public DateTime? PointsCalculatedAt { get; set; }
 
         // Datos extras para predicciones especiales (Champions Final)
         public int?  HtHomeScore  { get; set; }   // Marcador HT local

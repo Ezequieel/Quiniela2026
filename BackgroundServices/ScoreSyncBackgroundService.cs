@@ -82,12 +82,21 @@ namespace QuinielaApp.BackgroundServices
                 await db.SaveChangesAsync();
             }
 
-            // Red de seguridad: recalcular predicciones de partidos FT que
-            // quedaron sin calcular (ResultCorrect == null), p.ej. porque el
-            // partido pasó a FT por un sync manual sin pasar por el cálculo
-            // de puntos.
-            foreach (var stage in activeStages)
-                await predSvc.CalculatePendingPointsAsync(stage.Id);
+            // Recalcular puntos desactualizados: fases activas + fases Finished
+            // con partidos actualizados en las últimas 72 h (cubre el caso donde
+            // ApiStatus llegó tarde de la API después de que la fase se cerró).
+            var recentlyFinishedIds = await db.Stages
+                .Where(s => s.Status == StageStatus.Finished &&
+                            s.Matches.Any(m => m.LastUpdated > DateTime.UtcNow.AddHours(-72)))
+                .Select(s => s.Id)
+                .ToListAsync();
+
+            var staleStageIds = activeStages.Select(s => s.Id)
+                .Concat(recentlyFinishedIds)
+                .Distinct();
+
+            foreach (var sid in staleStageIds)
+                await predSvc.CalculateStalePointsAsync(sid);
 
             // ── Intervalo dinámico para el próximo ciclo ──────
             var allMatches = activeStages.SelectMany(s => s.Matches).ToList();

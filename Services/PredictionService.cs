@@ -194,6 +194,21 @@ namespace QuinielaApp.Services
                 .ToListAsync();
             for (int i = 0; i < results.Count; i++) results[i].Rank = i + 1;
 
+            // Estampar PointsCalculatedAt en los partidos que se acaban de calcular
+            var processedIds = finishedMatches
+                .Where(m => m.HomeScore.HasValue && m.AwayScore.HasValue)
+                .Select(m => m.Id)
+                .ToList();
+            if (processedIds.Count > 0)
+            {
+                var matchesToStamp = await _db.Matches
+                    .Where(m => processedIds.Contains(m.Id))
+                    .ToListAsync();
+                var stamp = DateTime.UtcNow;
+                foreach (var m in matchesToStamp)
+                    m.PointsCalculatedAt = stamp;
+            }
+
             await _db.SaveChangesAsync();
             _log.LogInformation("Puntos parciales — fase {S}, {N} partidos FT",
                 stageId, finishedMatches.Count);
@@ -345,8 +360,38 @@ namespace QuinielaApp.Services
             else if (partidosTerminados > 0)
                 stage.Status = StageStatus.InProgress;
 
+            // Estampar PointsCalculatedAt en todos los partidos FT calculados
+            var stamp = DateTime.UtcNow;
+            foreach (var m in ftMatches)
+                m.PointsCalculatedAt = stamp;
+
             await _db.SaveChangesAsync();
             _log.LogInformation("Puntos calculados para fase {S}", stage.Name);
+        }
+
+        // ── Recalcular puntos desactualizados ─────────────
+        // Busca partidos FT cuyo PointsCalculatedAt es null o anterior a LastUpdated
+        // (es decir, el partido se actualizó en BD después del último cálculo de puntos).
+        // Funciona para cualquier estado de fase, incluyendo Finished.
+        public async Task<int> CalculateStalePointsAsync(int stageId)
+        {
+            var staleMatches = await _db.Matches
+                .Where(m => m.StageId == stageId &&
+                            m.Status == "FT" &&
+                            m.HomeScore != null &&
+                            m.AwayScore != null &&
+                            (m.PointsCalculatedAt == null ||
+                             m.PointsCalculatedAt < m.LastUpdated))
+                .ToListAsync();
+
+            if (staleMatches.Count == 0) return 0;
+
+            _log.LogInformation(
+                "Fase {S}: {N} partido(s) con puntos desactualizados — recalculando",
+                stageId, staleMatches.Count);
+
+            await CalculatePartialPointsAsync(stageId, staleMatches);
+            return staleMatches.Count;
         }
     }
 }

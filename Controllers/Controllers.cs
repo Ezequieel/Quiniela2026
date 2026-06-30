@@ -1146,6 +1146,11 @@ namespace QuinielaApp.Controllers
                     pred.ScoreCorrect  = r.ScoreCorrect;
                 }
 
+                // Marcar todos los partidos FT como recalculados ahora
+                var recalcStamp = DateTime.UtcNow;
+                foreach (var m in ftMatches)
+                    m.PointsCalculatedAt = recalcStamp;
+
                 await _db.SaveChangesAsync();
 
                 // Recalcular StageResults y TournamentEntries usando el servicio
