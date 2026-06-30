@@ -1070,6 +1070,113 @@ namespace QuinielaApp.Controllers
             return RedirectToAction("Index");
         }
 
+        // ── Recálculo masivo de puntos (corrección histórica) ────────────────
+        // Recorre TODAS las fases de un torneo, recalcula PointsEarned,
+        // ResultCorrect, ScoreCorrect de cada predicción usando PointsCalculator,
+        // luego recalcula StageResults y TournamentEntries desde cero.
+        [HttpPost]
+        public async Task<IActionResult> RecalcularTodo(int id) // id = tournamentId
+        {
+            var stages = await _db.Stages
+                .Include(s => s.Matches)
+                .Where(s => s.TournamentId == id)
+                .ToListAsync();
+
+            if (!stages.Any())
+            {
+                TempData["Error"] = "No se encontraron fases para este torneo.";
+                return RedirectToAction("Index");
+            }
+
+            int totalPrediciones   = 0;
+            int predCorregidas     = 0;
+            int etapasRecalculadas = 0;
+
+            foreach (var stage in stages)
+            {
+                var ftMatches = stage.Matches
+                    .Where(m => m.Status == "FT" && m.HomeScore != null && m.AwayScore != null)
+                    .ToList();
+                if (!ftMatches.Any()) continue;
+
+                // Permitir recalcular aunque la fase ya esté marcada Finished
+                var prevStatus = stage.Status;
+                if (stage.Status == StageStatus.Finished)
+                    stage.Status = StageStatus.InProgress;
+
+                // Limpiar StageResults de esta fase para que CalculateStagePointsAsync los recree
+                var oldResults = await _db.StageResults
+                    .Where(r => r.StageId == stage.Id)
+                    .ToListAsync();
+                _db.StageResults.RemoveRange(oldResults);
+
+                // Resetear predicciones de partidos FT de esta fase
+                var stageMatchIds = ftMatches.Select(m => m.Id).ToList();
+                var predsToReset  = await _db.Predictions
+                    .Where(p => stageMatchIds.Contains(p.MatchId))
+                    .ToListAsync();
+
+                bool isKnockout = stage.Type != StageType.League && stage.Type != StageType.GroupStage;
+                totalPrediciones += predsToReset.Count;
+
+                foreach (var pred in predsToReset)
+                {
+                    var match = ftMatches.First(m => m.Id == pred.MatchId);
+                    var antes = pred.PointsEarned;
+
+                    var r = PointsCalculator.Calculate(
+                        match.HomeScore!.Value,
+                        match.AwayScore!.Value,
+                        match.ApiStatus,
+                        match.Qualifier,
+                        isKnockout,
+                        pred.ResultPrediction.ToString(),
+                        pred.HomeScorePred ?? -1,
+                        pred.AwayScorePred ?? -1,
+                        pred.QualifierPred,
+                        pred.PenaltyPred);
+
+                    if (pred.PointsEarned != r.Points ||
+                        pred.ResultCorrect != r.ResultCorrect ||
+                        pred.ScoreCorrect  != r.ScoreCorrect)
+                        predCorregidas++;
+
+                    pred.PointsEarned  = r.Points;
+                    pred.ResultCorrect = r.ResultCorrect;
+                    pred.ScoreCorrect  = r.ScoreCorrect;
+                }
+
+                await _db.SaveChangesAsync();
+
+                // Recalcular StageResults y TournamentEntries usando el servicio
+                stage.Status = StageStatus.InProgress; // permite que CalculateStagePointsAsync entre
+                await _db.SaveChangesAsync();
+                await _predSvc.CalculateStagePointsAsync(stage.Id);
+
+                etapasRecalculadas++;
+            }
+
+            // Recalcular TotalPoints de TournamentEntries desde cero
+            var allStageIds = stages.Select(s => s.Id).ToList();
+            var entries = await _db.TournamentEntries
+                .Where(e => e.TournamentId == id)
+                .ToListAsync();
+
+            foreach (var entry in entries)
+            {
+                entry.TotalPoints = await _db.StageResults
+                    .Where(r => r.UserId == entry.UserId && allStageIds.Contains(r.StageId))
+                    .SumAsync(r => (int?)r.Points) ?? 0;
+            }
+            await _db.SaveChangesAsync();
+
+            TempData["Success"] =
+                $"Recálculo completo: {etapasRecalculadas} fase(s), " +
+                $"{totalPrediciones} predicciones revisadas, " +
+                $"{predCorregidas} corregidas.";
+            return RedirectToAction("Index");
+        }
+
         // ── Ver pagos ─────────────────────────────────────
         [HttpGet]
         public async Task<IActionResult> Payments(int? stageId = null, string? status = null)

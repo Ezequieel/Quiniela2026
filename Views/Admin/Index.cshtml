@@ -91,6 +91,11 @@
             <div class="admin-tour-actions">
                 <a asp-action="CreateStage" asp-route-id="@t.Id" class="btn btn-secondary btn-sm">Agregar fase</a>
                 <a asp-action="EditTournament" asp-route-id="@t.Id" class="btn btn-outline btn-sm">Editar</a>
+                <form asp-action="RecalcularTodo" asp-route-id="@t.Id" method="post" style="display:inline"
+                      onsubmit="return confirm('¿Recalcular TODOS los puntos del torneo @t.Name desde cero?\nEsto corrige el historial completo.')">
+                    @Html.AntiForgeryToken()
+                    <button class="btn btn-primary btn-sm" style="background:var(--amarillo);color:#000">Recalcular todo</button>
+                </form>
                 <form asp-action="DeleteTournament" asp-route-id="@t.Id" method="post" style="display:inline"
                       onsubmit="return confirm('¿Eliminar el torneo @t.Name y todos sus datos?')">
                     @Html.AntiForgeryToken()
