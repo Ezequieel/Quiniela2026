@@ -124,25 +124,7 @@ namespace QuinielaApp.BackgroundServices
                 {
                     var prev      = match.Status;
                     var apiStatus = live.Fixture.Status.Short;
-
-                    // AET/PEN: usar score.fulltime (marcador al 90') para cálculo justo
-                    if (apiStatus == "AET" || apiStatus == "PEN")
-                    {
-                        match.HomeScore = live.Score?.Fulltime?.Home ?? live.Goals.Home;
-                        match.AwayScore = live.Score?.Fulltime?.Away ?? live.Goals.Away;
-                        match.ApiStatus = apiStatus;
-                        if (live.Teams.Home.Winner.HasValue)
-                            match.Qualifier = live.Teams.Home.Winner == true ? "Home" : "Away";
-                    }
-                    else
-                    {
-                        match.HomeScore = live.Goals.Home;
-                        match.AwayScore = live.Goals.Away;
-                        if (apiStatus == "FT") match.ApiStatus = "FT";
-                    }
-
-                    match.Status      = ApiFootballService.NormalizeStatus(
-                        apiStatus, live.Fixture.Status.Elapsed, match.MatchDate, match.HomeScore, match.AwayScore);
+                    ApiFootballService.ApplyFixtureData(match, live);
                     match.Elapsed     = live.Fixture.Status.Elapsed;
                     match.LastUpdated = now;
                     updated++;
@@ -172,25 +154,7 @@ namespace QuinielaApp.BackgroundServices
                     {
                         var prev      = match.Status;
                         var apiStatus = detail.Fixture.Status.Short;
-
-                        // AET/PEN: usar score.fulltime (marcador al 90') para cálculo justo
-                        if (apiStatus == "AET" || apiStatus == "PEN")
-                        {
-                            match.HomeScore = detail.Score?.Fulltime?.Home ?? detail.Goals.Home;
-                            match.AwayScore = detail.Score?.Fulltime?.Away ?? detail.Goals.Away;
-                            match.ApiStatus = apiStatus;
-                            if (detail.Teams.Home.Winner.HasValue)
-                                match.Qualifier = detail.Teams.Home.Winner == true ? "Home" : "Away";
-                        }
-                        else
-                        {
-                            match.HomeScore = detail.Goals.Home;
-                            match.AwayScore = detail.Goals.Away;
-                            if (apiStatus == "FT") match.ApiStatus = "FT";
-                        }
-
-                        match.Status      = ApiFootballService.NormalizeStatus(
-                            apiStatus, detail.Fixture.Status.Elapsed, match.MatchDate, match.HomeScore, match.AwayScore);
+                        ApiFootballService.ApplyFixtureData(match, detail);
                         match.Elapsed     = detail.Fixture.Status.Elapsed;
                         match.LastUpdated = now;
                         updated++;

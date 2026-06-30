@@ -293,52 +293,18 @@ namespace QuinielaApp.Services
             int created = 0, updated = 0;
             foreach (var f in fixtures)
             {
-                var rawStatus = f.Fixture.Status.Short;
-
                 var existing = await _db.Matches.FirstOrDefaultAsync(m => m.ApiMatchId == f.Fixture.Id);
                 if (existing != null)
                 {
-                    existing.StageId   = stageId;
-                    existing.HomeScore = f.Goals.Home;
-                    existing.AwayScore = f.Goals.Away;
-                    existing.ApiStatus = rawStatus;
-                    existing.Status    = ApiFootballService.NormalizeStatus(
-                        rawStatus,
-                        f.Fixture.Status.Elapsed,
-                        existing.MatchDate,
-                        existing.HomeScore,
-                        existing.AwayScore);
-
-                    if (rawStatus == "AET" || rawStatus == "PEN")
-                    {
-                        if (f.Teams?.Home?.Winner == true)
-                            existing.Qualifier = "Home";
-                        else if (f.Teams?.Away?.Winner == true)
-                            existing.Qualifier = "Away";
-                    }
-
+                    existing.StageId = stageId;
+                    ApiFootballService.ApplyFixtureData(existing, f);
                     existing.LastUpdated = DateTime.UtcNow;
                     updated++;
                 }
                 else
                 {
                     var newMatch = ApiFootballService.MapToMatch(f, stageId);
-                    newMatch.ApiStatus = rawStatus;
-                    newMatch.Status    = ApiFootballService.NormalizeStatus(
-                        rawStatus,
-                        f.Fixture.Status.Elapsed,
-                        newMatch.MatchDate,
-                        newMatch.HomeScore,
-                        newMatch.AwayScore);
-
-                    if (rawStatus == "AET" || rawStatus == "PEN")
-                    {
-                        if (f.Teams?.Home?.Winner == true)
-                            newMatch.Qualifier = "Home";
-                        else if (f.Teams?.Away?.Winner == true)
-                            newMatch.Qualifier = "Away";
-                    }
-
+                    ApiFootballService.ApplyFixtureData(newMatch, f);
                     _db.Matches.Add(newMatch);
                     created++;
                 }

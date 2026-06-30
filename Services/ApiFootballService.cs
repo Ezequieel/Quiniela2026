@@ -74,6 +74,34 @@ namespace QuinielaApp.Services
             Status       = f.Fixture.Status.Short
         };
 
+        // ── Aplicar datos de un fixture a un Match existente ─────────────────
+        // Único punto de verdad para mapear score, ApiStatus, Status normalizado
+        // y Qualifier desde cualquier respuesta de la API (live, detail o batch).
+        public static void ApplyFixtureData(Match match, ApiFixture f)
+        {
+            var rawStatus = f.Fixture.Status.Short;
+
+            if (rawStatus == "AET" || rawStatus == "PEN")
+            {
+                // Usar marcador al 90' (fulltime), no el marcador de la prórroga
+                match.HomeScore = f.Score?.Fulltime?.Home ?? f.Goals.Home;
+                match.AwayScore = f.Score?.Fulltime?.Away ?? f.Goals.Away;
+                match.Qualifier = f.Teams?.Home?.Winner == true ? "Home"
+                                : f.Teams?.Away?.Winner == true ? "Away"
+                                : null;
+            }
+            else
+            {
+                match.HomeScore = f.Goals.Home;
+                match.AwayScore = f.Goals.Away;
+            }
+
+            match.ApiStatus = rawStatus;
+            match.Status    = NormalizeStatus(
+                rawStatus, f.Fixture.Status.Elapsed,
+                match.MatchDate, match.HomeScore, match.AwayScore);
+        }
+
         // ── Resultado del partido ─────────────────────────
         public static MatchResult? GetResult(int? home, int? away)
         {
