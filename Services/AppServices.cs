@@ -297,9 +297,15 @@ namespace QuinielaApp.Services
                 if (existing != null)
                 {
                     existing.StageId = stageId;
-                    ApiFootballService.ApplyFixtureData(existing, f);
-                    existing.LastUpdated = DateTime.UtcNow;
-                    updated++;
+                    // Partidos ya finalizados no se vuelven a tocar: la API puede devolver
+                    // score.fulltime inconsistente en llamados posteriores (ver ApplyFixtureData),
+                    // lo que corrompería el marcador guardado y dispararía un recálculo de puntos incorrecto.
+                    if (existing.Status != "FT")
+                    {
+                        ApiFootballService.ApplyFixtureData(existing, f);
+                        existing.LastUpdated = DateTime.UtcNow;
+                        updated++;
+                    }
                 }
                 else
                 {
