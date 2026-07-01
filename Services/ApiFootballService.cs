@@ -94,6 +94,8 @@ namespace QuinielaApp.Services
             {
                 match.HomeScore = f.Goals.Home;
                 match.AwayScore = f.Goals.Away;
+                // Un partido que no terminó en AET/PEN no tiene clasificador por penales/ET.
+                match.Qualifier = null;
             }
 
             match.ApiStatus = rawStatus;
