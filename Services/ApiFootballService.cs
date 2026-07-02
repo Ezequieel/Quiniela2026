@@ -116,17 +116,27 @@ namespace QuinielaApp.Services
         public static string GetStat(List<ApiStatItem>? stats, string type) =>
             stats?.FirstOrDefault(s => s.Type == type)?.Value?.ToString() ?? "0";
 
+        // ── Status finales reales de la API (AET = After Extra Time, PEN = Penalties) ──
+        public static readonly HashSet<string> FinalApiStatuses = new()
+        { "FT", "AET", "PEN", "AWD", "WO" };
+
+        // Status que indican que el partido puede seguir yendo a tiempo extra/penales.
+        // Nunca hay que forzar FT interno mientras la API reporte alguno de estos,
+        // aunque hayan pasado más de 130 min desde el kickoff.
+        private static readonly HashSet<string> ExtensionStatuses = new()
+        { "ET", "BT", "P" };
+
         // ── Forzar FT cuando la API se queda atascada con un status
         // intermedio aunque el partido ya terminó ────────────────
         public static string NormalizeStatus(string apiStatus, int? elapsed, DateTime matchDate, int? homeScore, int? awayScore)
         {
-            // Status finales de la API → FT interno (AET = After Extra Time, PEN = Penalties)
-            if (apiStatus == "FT"  ||
-                apiStatus == "AET" ||
-                apiStatus == "PEN" ||
-                apiStatus == "AWD" ||
-                apiStatus == "WO")
+            if (FinalApiStatuses.Contains(apiStatus))
                 return "FT";
+
+            // Nunca forzar FT mientras el partido esté en tiempo extra/penales:
+            // ahí es normal y esperado superar los 130 min desde el kickoff.
+            if (ExtensionStatuses.Contains(apiStatus))
+                return apiStatus;
 
             // Regla 1: 2H con tiempo de descuento largo y marcador definido
             if (apiStatus == "2H" &&
@@ -135,6 +145,8 @@ namespace QuinielaApp.Services
                 return "FT";
 
             // Regla 2: más de 130 min desde el inicio con marcador definido
+            // (solo para status que la API nunca actualizó — no puede ser un
+            // partido legítimamente en tiempo extra, ya filtrado arriba)
             if (matchDate < DateTime.UtcNow.AddMinutes(-130) &&
                 apiStatus != "NS" &&
                 apiStatus != "1H" &&

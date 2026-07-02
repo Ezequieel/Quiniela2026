@@ -126,7 +126,12 @@ namespace QuinielaApp.BackgroundServices
 
             foreach (var match in stage.Matches)
             {
-                if (match.Status == "FT") continue;
+                // OJO: no usar match.Status=="FT" acá — ese campo puede haber sido forzado
+                // a "FT" por NormalizeStatus (heurística de partido atascado) sin que la API
+                // haya confirmado un resultado final real. Si dependiéramos de Status, un
+                // partido de eliminatoria que fue a tiempo extra/penales quedaría congelado
+                // para siempre con el marcador del minuto 90 y sin Qualifier.
+                if (ApiFootballService.FinalApiStatuses.Contains(match.ApiStatus ?? "")) continue;
 
                 var live = liveFixtures.FirstOrDefault(f => f.Fixture.Id == match.ApiMatchId);
                 if (live != null)

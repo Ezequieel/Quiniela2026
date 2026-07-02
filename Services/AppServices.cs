@@ -297,10 +297,16 @@ namespace QuinielaApp.Services
                 if (existing != null)
                 {
                     existing.StageId = stageId;
-                    // Partidos ya finalizados no se vuelven a tocar: la API puede devolver
-                    // score.fulltime inconsistente en llamados posteriores (ver ApplyFixtureData),
-                    // lo que corrompería el marcador guardado y dispararía un recálculo de puntos incorrecto.
-                    if (existing.Status != "FT")
+                    // Partidos con status final CONFIRMADO por la API no se vuelven a tocar:
+                    // la API puede devolver score.fulltime inconsistente en llamados posteriores
+                    // (ver ApplyFixtureData), lo que corrompería el marcador guardado y dispararía
+                    // un recálculo de puntos incorrecto.
+                    // OJO: no usar existing.Status=="FT" acá — ese campo puede haber sido forzado
+                    // a "FT" por NormalizeStatus (heurística de partido atascado) sin que la API
+                    // haya confirmado un resultado final real. Si dependiéramos de Status, un
+                    // partido de eliminatoria que fue a tiempo extra/penales quedaría congelado
+                    // para siempre con el marcador del minuto 90 y sin Qualifier.
+                    if (!ApiFootballService.FinalApiStatuses.Contains(existing.ApiStatus ?? ""))
                     {
                         ApiFootballService.ApplyFixtureData(existing, f);
                         existing.LastUpdated = DateTime.UtcNow;
