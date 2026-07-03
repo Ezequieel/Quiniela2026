@@ -138,13 +138,15 @@ namespace QuinielaApp.Services
             if (ExtensionStatuses.Contains(apiStatus))
                 return apiStatus;
 
-            // Regla 1: 2H con tiempo de descuento largo y marcador definido
-            if (apiStatus == "2H" &&
-                elapsed >= 95 &&
-                homeScore.HasValue && awayScore.HasValue)
-                return "FT";
+            // NOTA: existía una "Regla 1" que forzaba FT en "2H" con elapsed>=95,
+            // pensada para APIs atascadas. Se eliminó porque un 2H con 5+ min de
+            // descuento (habitual con VAR) es un partido real en curso, no atascado:
+            // forzaba FT con el marcador a mitad de la jugada, sin Qualifier, y si
+            // era el último partido de la fase la marcaba Finished antes de tiempo.
+            // La Regla 2 (130 min de margen desde el kickoff) ya cubre el caso de
+            // un status realmente atascado sin generar falsos positivos en vivo.
 
-            // Regla 2: más de 130 min desde el inicio con marcador definido
+            // Regla: más de 130 min desde el inicio con marcador definido
             // (solo para status que la API nunca actualizó — no puede ser un
             // partido legítimamente en tiempo extra, ya filtrado arriba)
             if (matchDate < DateTime.UtcNow.AddMinutes(-130) &&
