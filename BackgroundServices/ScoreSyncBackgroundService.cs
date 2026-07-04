@@ -133,6 +133,13 @@ namespace QuinielaApp.BackgroundServices
                 // para siempre con el marcador del minuto 90 y sin Qualifier.
                 if (ApiFootballService.FinalApiStatuses.Contains(match.ApiStatus ?? "")) continue;
 
+                // Partidos "FT" sin ApiStatus (datos históricos previos a que existiera ese
+                // campo) y ya terminados hace mucho: cualquier ET/penales real ya habría
+                // concluido, así que insistir con el fallback cada 5 min para siempre solo
+                // quema requests sin nunca poder cambiar el resultado. Usamos MatchDate (no
+                // Status, que puede haber sido forzado) como corte seguro de 24h.
+                if (match.Status == "FT" && match.MatchDate < now.AddHours(-24)) continue;
+
                 var live = liveFixtures.FirstOrDefault(f => f.Fixture.Id == match.ApiMatchId);
                 if (live != null)
                 {
