@@ -60,8 +60,15 @@ namespace QuinielaApp.BackgroundServices
                 .Where(s => s.Status == StageStatus.Open || s.Status == StageStatus.InProgress)
                 .ToListAsync();
 
+            // OJO: no usar m.Status!="FT" acá — Status puede haber sido forzado a "FT"
+            // por NormalizeStatus sin que la API haya confirmado un resultado final
+            // real (ver ApplyFixtureData). Si dependiéramos de Status, una fase entera
+            // dejaría de sincronizarse para siempre en cuanto ese partido "atascado"
+            // fuera el único con MatchDate <= 30 min, sin chance de autocorregirse.
             var stagesToSync = activeStages.Where(s =>
-                s.Matches.Any(m => m.Status != "FT" && m.MatchDate <= now.AddMinutes(30))
+                s.Matches.Any(m =>
+                    !ApiFootballService.FinalApiStatuses.Contains(m.ApiStatus ?? "") &&
+                    m.MatchDate <= now.AddMinutes(30))
             ).ToList();
 
             if (stagesToSync.Any())
