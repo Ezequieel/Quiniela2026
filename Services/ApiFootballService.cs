@@ -148,11 +148,17 @@ namespace QuinielaApp.Services
 
             // Regla: más de 130 min desde el inicio con marcador definido
             // (solo para status que la API nunca actualizó — no puede ser un
-            // partido legítimamente en tiempo extra, ya filtrado arriba)
+            // partido legítimamente en curso, ya filtrado arriba)
+            // NOTA: "2H" también queda excluido — un partido puede arrancar tarde
+            // o sufrir una demora (clima, lesión, VAR) y seguir genuinamente en el
+            // segundo tiempo mucho después de los 130 min desde el MatchDate
+            // guardado (visto en vivo: México-Inglaterra, kickoff tardío, 139 min
+            // transcurridos con el partido recién en el minuto 48 del 2T).
             if (matchDate < DateTime.UtcNow.AddMinutes(-130) &&
                 apiStatus != "NS" &&
                 apiStatus != "1H" &&
                 apiStatus != "HT" &&
+                apiStatus != "2H" &&
                 homeScore.HasValue && awayScore.HasValue)
                 return "FT";
 
