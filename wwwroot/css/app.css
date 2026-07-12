@@ -881,6 +881,13 @@ textarea.input, textarea.form-control { resize: vertical; min-height: 90px; }
   background: var(--amarillo); color: var(--ink); padding: 2px 9px; border-radius: var(--r); text-transform: uppercase; letter-spacing: .04em;
 }
 
+.pred-extension-note {
+  margin-top: .35rem; margin-bottom: .3rem; padding: .45rem .6rem;
+  border-radius: var(--r); font-size: .75rem; line-height: 1.4;
+  background: #FFFBEB; border: 1px solid #FDE68A; color: #92400E;
+}
+.pred-extension-note strong { color: inherit; }
+
 /* ═══════════════════════════════════════
    LEADERBOARD
 ═══════════════════════════════════════ */

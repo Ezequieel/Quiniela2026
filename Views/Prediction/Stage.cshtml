@@ -270,7 +270,17 @@ else
                     _      => m.UserResult
                 };
                 <div class="pred-result-summary @(m.ResultCorrect == true ? "correct" : m.IsFinished ? "wrong" : "pending")">
-                    <span class="pred-label-sm">Tu predicción</span>
+                    @if (m.IsKnockout && m.IsFinished && m.HasExtension)
+                    {
+                        var finalWinnerLabel = m.MatchQualifier == "Home" ? m.HomeTeam
+                                              : m.MatchQualifier == "Away" ? m.AwayTeam : "—";
+                        <div class="pred-extension-note">
+                            ⏱ A los 90' terminó @(m.HomeScore ?? 0)–@(m.AwayScore ?? 0) (empate) y se definió en
+                            @(m.HuboPenaltis ? "penales" : "tiempo extra"). Clasificó <strong>@finalWinnerLabel</strong>.
+                            Los puntos se calculan sobre el resultado a los 90'.
+                        </div>
+                    }
+                    <span class="pred-label-sm">Tu predicción @(m.IsKnockout && m.HasExtension ? "(a los 90')" : "")</span>
                     <strong>@resLabel</strong>
                     @if (m.IsFinished)
                     {
@@ -319,6 +329,12 @@ else
                                 }
                             </div>
                         }
+                    }
+                    else if (m.IsKnockout && m.IsFinished && m.HasExtension && m.UserQualifier == null)
+                    {
+                        <div class="score-pred-display">
+                            No arriesgaste quién clasifica (esa opción solo aparece si predecís empate a los 90').
+                        </div>
                     }
                     @if (m.IsFinished && m.PointsEarned > 0)
                     {
