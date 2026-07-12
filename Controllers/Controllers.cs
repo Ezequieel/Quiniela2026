@@ -524,6 +524,29 @@ namespace QuinielaApp.Controllers
             ViewBag.IsMundial = stage.Tournament.ApiLeagueId == 1;
             ViewBag.IsUcl     = stage.Tournament.ApiLeagueId == 2;
             var isUclFinal    = stage.Tournament.ApiLeagueId == 2 && stage.Type == StageType.Final;
+
+            // Comparación con el líder del torneo (motivacional) — solo lectura, no afecta puntos
+            var entries = await _db.TournamentEntries
+                .Include(e => e.User)
+                .Where(e => e.TournamentId == stage.TournamentId)
+                .OrderByDescending(e => e.TotalPoints)
+                .ToListAsync();
+
+            bool hasStandings = false;
+            bool isLeader = false;
+            int myPoints = 0, leaderPoints = 0;
+            string leaderName = string.Empty;
+            if (entries.Any())
+            {
+                hasStandings = true;
+                var leader = entries.First();
+                var mine   = entries.FirstOrDefault(e => e.UserId == uid);
+                leaderPoints = leader.TotalPoints;
+                leaderName   = leader.User.FullName;
+                myPoints     = mine?.TotalPoints ?? 0;
+                isLeader     = mine != null && mine.UserId == leader.UserId;
+            }
+
             return View(isUclFinal ? "ChampionsFinal" : "Stage", new StageMatchesVm
             {
                 StageId        = stageId,
@@ -535,7 +558,12 @@ namespace QuinielaApp.Controllers
                                && cards.Any(c => c.CanPredict),
                 IsPaid         = paid,
                 IsKnockout     = stage.Type != StageType.League && stage.Type != StageType.GroupStage,
-                Matches        = cards
+                Matches        = cards,
+                HasStandings   = hasStandings,
+                IsLeader       = isLeader,
+                MyPoints       = myPoints,
+                LeaderPoints   = leaderPoints,
+                LeaderName     = leaderName
             });
         }
 
@@ -853,6 +881,49 @@ namespace QuinielaApp.Controllers
                 ? matches.FirstOrDefault(m => m.MatchId == matchId)?.Label ?? ""
                 : string.Empty;
 
+            // Estadísticas personales — independientes del filtro de partido,
+            // siempre sobre todas las predicciones finalizadas del usuario en el torneo
+            UserStatsVm? stats = null;
+            if (userId.HasValue)
+            {
+                var userPreds = await _db.Predictions
+                    .Include(p => p.Match).ThenInclude(m => m.Stage)
+                    .Where(p => p.UserId == userId.Value &&
+                                p.Match.Stage.TournamentId == tournamentId &&
+                                p.Match.Status == "FT")
+                    .OrderBy(p => p.Match.MatchDate)
+                    .ToListAsync();
+
+                if (userPreds.Any())
+                {
+                    int best = 0, running = 0;
+                    foreach (var p in userPreds)
+                    {
+                        if (p.ResultCorrect == true) { running++; if (running > best) best = running; }
+                        else running = 0;
+                    }
+
+                    var bestMatch = userPreds.OrderByDescending(p => p.PointsEarned).First();
+
+                    stats = new UserStatsVm
+                    {
+                        TotalFinished = userPreds.Count,
+                        ResultHits    = userPreds.Count(p => p.ResultCorrect == true),
+                        ScoreHits     = userPreds.Count(p => p.ScoreCorrect  == true),
+                        CurrentStreak = running,
+                        BestStreak    = best
+                    };
+
+                    if (bestMatch.PointsEarned > 0)
+                    {
+                        stats.BestMatchHomeTeam = bestMatch.Match.HomeTeam;
+                        stats.BestMatchAwayTeam = bestMatch.Match.AwayTeam;
+                        stats.BestMatchStage    = bestMatch.Match.Stage.Name;
+                        stats.BestMatchPoints   = bestMatch.PointsEarned;
+                    }
+                }
+            }
+
             var vm = new PredictionLogVm
             {
                 TournamentId    = tournamentId,
@@ -864,6 +935,7 @@ namespace QuinielaApp.Controllers
                 Users           = users,
                 Matches         = matches,
                 TotalRows       = predictions.Count,
+                Stats           = stats,
                 Rows = predictions.Select(p => new PredictionLogRowVm
                 {
                     PredictionId  = p.Id,

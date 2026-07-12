@@ -4,17 +4,45 @@
 @if (!string.IsNullOrEmpty(Model.FilterUserName))
 {
     <div class="history-profile-card">
-        <div class="hpc-avatar">@Model.FilterUserName[0].ToString().ToUpper()</div>
-        <div>
-            <div class="hpc-name">@Model.FilterUserName</div>
-            <div class="hpc-handle">Registro de predicciones</div>
-        </div>
-        <div class="hpc-stats" style="margin-left:auto">
-            <div class="hpc-stat">
-                <span class="hpc-num">@Model.TotalRows</span>
-                <span class="hpc-lbl">Predicciones</span>
+        <div class="hpc-top">
+            <div class="hpc-avatar">@Model.FilterUserName[0].ToString().ToUpper()</div>
+            <div>
+                <div class="hpc-name">@Model.FilterUserName</div>
+                <div class="hpc-handle">Registro de predicciones</div>
+            </div>
+            <div class="hpc-stats" style="margin-left:auto">
+                <div class="hpc-stat">
+                    <span class="hpc-num">@Model.TotalRows</span>
+                    <span class="hpc-lbl">Predicciones</span>
+                </div>
+                @if (Model.Stats != null)
+                {
+                    <div class="hpc-stat">
+                        <span class="hpc-num">@Model.Stats.CurrentStreak</span>
+                        <span class="hpc-lbl">Racha actual</span>
+                    </div>
+                    <div class="hpc-stat">
+                        <span class="hpc-num">@Model.Stats.BestStreak</span>
+                        <span class="hpc-lbl">Mejor racha</span>
+                    </div>
+                    <div class="hpc-stat">
+                        <span class="hpc-num">@(Model.Stats.ResultHitRate)%</span>
+                        <span class="hpc-lbl">Result. correcto</span>
+                    </div>
+                    <div class="hpc-stat">
+                        <span class="hpc-num">@(Model.Stats.ScoreHitRate)%</span>
+                        <span class="hpc-lbl">Marcador exacto</span>
+                    </div>
+                }
             </div>
         </div>
+        @if (Model.Stats?.BestMatchPoints > 0)
+        {
+            <div class="hpc-bottom">
+                ⭐ Su mejor partido: <strong>@Model.Stats.BestMatchHomeTeam vs @Model.Stats.BestMatchAwayTeam</strong>
+                (@Model.Stats.BestMatchStage) — +@Model.Stats.BestMatchPoints pts
+            </div>
+        }
     </div>
 }
 

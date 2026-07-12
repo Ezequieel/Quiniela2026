@@ -75,6 +75,24 @@ else
     </div>
 }
 
+@if (Model.HasStandings)
+{
+    <div class="leader-compare-banner @(Model.IsLeader ? "is-leader" : "")">
+        @if (Model.IsLeader)
+        {
+            <span>🏆 Vas <strong>primero</strong> con <strong>@Model.MyPoints pts</strong></span>
+        }
+        else
+        {
+            <span>
+                El líder (@Model.LeaderName) lleva <strong>@Model.LeaderPoints pts</strong>
+                · Vos llevás <strong>@Model.MyPoints pts</strong>
+                · Diferencia: <strong>@Model.PointsBehindLeader pts</strong>
+            </span>
+        }
+    </div>
+}
+
 <div class="pts-legend">
 @if (stageIsKnockout)
 {

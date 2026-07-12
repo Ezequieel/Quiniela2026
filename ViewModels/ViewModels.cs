@@ -118,6 +118,14 @@ namespace QuinielaApp.ViewModels
         public bool     IsPaid     { get; set; }
         public bool     IsKnockout { get; set; }
         public List<MatchPredVm> Matches { get; set; } = new();
+
+        // Comparación con el líder del torneo (motivacional)
+        public bool     HasStandings      { get; set; }
+        public bool     IsLeader          { get; set; }
+        public int      MyPoints          { get; set; }
+        public int      LeaderPoints      { get; set; }
+        public string   LeaderName        { get; set; } = string.Empty;
+        public int      PointsBehindLeader => Math.Max(0, LeaderPoints - MyPoints);
     }
 
     // ── Predicciones especiales Champions Final ───────────
@@ -346,6 +354,24 @@ namespace QuinielaApp.ViewModels
         // Registros
         public List<PredictionLogRowVm> Rows  { get; set; } = new();
         public int TotalRows { get; set; }
+        // Estadísticas personales (solo cuando se filtra por un participante)
+        public UserStatsVm? Stats { get; set; }
+    }
+
+    public class UserStatsVm
+    {
+        public int TotalFinished { get; set; }
+        public int ResultHits    { get; set; }
+        public int ScoreHits     { get; set; }
+        public int CurrentStreak { get; set; }
+        public int BestStreak    { get; set; }
+        public string? BestMatchHomeTeam { get; set; }
+        public string? BestMatchAwayTeam { get; set; }
+        public string? BestMatchStage    { get; set; }
+        public int      BestMatchPoints  { get; set; }
+
+        public double ResultHitRate => TotalFinished > 0 ? Math.Round(100.0 * ResultHits / TotalFinished, 1) : 0;
+        public double ScoreHitRate  => TotalFinished > 0 ? Math.Round(100.0 * ScoreHits  / TotalFinished, 1) : 0;
     }
 
     public class PredictionLogRowVm

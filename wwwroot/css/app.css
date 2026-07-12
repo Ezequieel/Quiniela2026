@@ -508,6 +508,18 @@ textarea.input, textarea.form-control { resize: vertical; min-height: 90px; }
 }
 .pts-legend strong { color: var(--amarillo); }
 
+.leader-compare-banner {
+  background: var(--ink); border: 1px solid rgba(255,255,255,.08);
+  border-left: 3px solid var(--blue); border-radius: var(--r);
+  padding: .7rem 1rem; margin-bottom: 1.2rem;
+  color: rgba(255,255,255,.65); font-size: .82rem;
+}
+.leader-compare-banner strong { color: #fff; }
+.leader-compare-banner.is-leader {
+  border-left-color: var(--amarillo);
+}
+.leader-compare-banner.is-leader strong { color: var(--amarillo); }
+
 /* ═══════════════════════════════════════
    TOUR WELCOME HERO (compat)
 ═══════════════════════════════════════ */
@@ -1262,7 +1274,7 @@ textarea.input, textarea.form-control { resize: vertical; min-height: 90px; }
     url('/img/cancha_bg.jpg') center center / cover no-repeat;
   border-radius: var(--r); padding: 16px 18px;
   margin-bottom: 14px; position: relative; overflow: hidden;
-  display: flex; align-items: center; gap: 1rem;
+  display: flex; flex-direction: column; gap: .7rem;
 }
 .history-profile-card::before {
   content: '';
@@ -1274,13 +1286,16 @@ textarea.input, textarea.form-control { resize: vertical; min-height: 90px; }
   pointer-events: none; z-index: 0;
 }
 .history-profile-card > * { position: relative; z-index: 1; }
+.hpc-top    { display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; }
 .hpc-avatar { width: 44px; height: 44px; border-radius: 50%; background: var(--rojo); color: #fff; display: flex; align-items: center; justify-content: center; font-family: 'Barlow Condensed', sans-serif; font-size: 18px; font-weight: 900; flex-shrink: 0; }
 .hpc-name   { font-family: 'Barlow Condensed', sans-serif; color: #fff; font-size: 18px; font-weight: 900; text-transform: uppercase; letter-spacing: .04em; }
 .hpc-handle { color: rgba(255,255,255,.35); font-size: 11px; margin-top: 1px; }
-.hpc-stats  { display: flex; gap: 1.5rem; }
+.hpc-stats  { display: flex; flex-wrap: wrap; gap: 1.5rem; row-gap: .6rem; }
 .hpc-stat   { text-align: center; }
 .hpc-num    { font-family: 'Barlow Condensed', sans-serif; color: #fff; font-weight: 900; font-size: 22px; display: block; line-height: 1; }
 .hpc-lbl    { font-size: 9px; color: rgba(255,255,255,.3); text-transform: uppercase; letter-spacing: .08em; margin-top: 2px; display: block; }
+.hpc-bottom { font-size: 11px; color: rgba(255,255,255,.55); border-top: 1px solid rgba(255,255,255,.1); padding-top: .6rem; }
+.hpc-bottom strong { color: #fff; }
 
 /* ═══════════════════════════════════════
    PAGO
