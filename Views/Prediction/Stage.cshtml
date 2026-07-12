@@ -35,7 +35,7 @@
             </div>
             <div>
                 <a asp-controller="Leaderboard" asp-action="Index"
-                   asp-route-tournamentId="@Model.TournamentId" asp-route-stageId="@Model.StageId"
+                   asp-route-tournamentId="@Model.TournamentId"
                    class="btn btn-sm"
                    style="background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.15);color:rgba(255,255,255,.8);font-family:'Barlow Condensed',sans-serif;font-weight:700;text-transform:uppercase;letter-spacing:.08em">
                     Clasificación
@@ -61,7 +61,7 @@ else
         </div>
         <div class="header-actions">
             <a asp-controller="Leaderboard" asp-action="Index"
-               asp-route-tournamentId="@Model.TournamentId" asp-route-stageId="@Model.StageId"
+               asp-route-tournamentId="@Model.TournamentId"
                class="btn btn-secondary btn-sm">Clasificación</a>
         </div>
     </div>
@@ -373,7 +373,7 @@ else
 {
     <div style="text-align:center;margin-top:1.5rem">
         <a asp-controller="Leaderboard" asp-action="Index"
-           asp-route-tournamentId="@Model.TournamentId" asp-route-stageId="@Model.StageId"
+           asp-route-tournamentId="@Model.TournamentId"
            class="btn btn-primary">Ver clasificación</a>
     </div>
 }
