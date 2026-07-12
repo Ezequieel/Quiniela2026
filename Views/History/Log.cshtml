@@ -158,6 +158,10 @@
                                   r.ResultPred == "Draw" ? "pred-draw" : "pred-away")">
                                 @r.ResultLabel
                             </span>
+                            @if (r.IsKnockout && r.HasExtension)
+                            {
+                                <div class="log-pred-hint">a 90'</div>
+                            }
                         </td>
 
                         <td class="log-score-pred">@r.ScorePred</td>
@@ -177,6 +181,14 @@
                                 else
                                 {
                                     <span class="log-badge log-badge-miss">Incorrecto</span>
+                                }
+                                if (r.IsKnockout && r.HasExtension)
+                                {
+                                    <div class="log-extension-note">
+                                        ⏱ @(r.ScoreReal) fue el resultado a los 90' (empate) — se definió en
+                                        @(r.ApiStatus == "PEN" ? "penales" : "tiempo extra"), clasificó @r.QualifierLabel.
+                                        Los puntos se calculan sobre el resultado a los 90'.
+                                    </div>
                                 }
                             }
                             else

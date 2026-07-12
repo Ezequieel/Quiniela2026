@@ -372,6 +372,10 @@ namespace QuinielaApp.ViewModels
         public bool?    ScoreCorrect  { get; set; }
         public int      PointsEarned  { get; set; }
         public DateTime UpdatedAt     { get; set; }
+        // Eliminatorias — solo para mostrar contexto, no afecta el cálculo de puntos
+        public string?  ApiStatus     { get; set; }  // "FT" | "AET" | "PEN"
+        public string?  Qualifier     { get; set; }  // "Home" | "Away" — quién clasificó realmente
+        public bool     IsKnockout    { get; set; }
 
         public bool IsFinished => MatchStatus == "FT";
         public string ResultLabel => ResultPred switch {
@@ -382,6 +386,8 @@ namespace QuinielaApp.ViewModels
         };
         public string ScorePred => HomePred.HasValue ? $"{HomePred} – {AwayPred}" : "—";
         public string ScoreReal => IsFinished ? $"{HomeScore ?? 0} – {AwayScore ?? 0}" : "En curso";
+        public bool   HasExtension   => ApiStatus == "AET" || ApiStatus == "PEN";
+        public string QualifierLabel => Qualifier == "Home" ? HomeTeam : Qualifier == "Away" ? AwayTeam : "—";
     }
 
     public class LogUserOptionVm

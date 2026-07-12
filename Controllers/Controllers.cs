@@ -886,7 +886,11 @@ namespace QuinielaApp.Controllers
                     ResultCorrect = p.ResultCorrect,
                     ScoreCorrect  = p.ScoreCorrect,
                     PointsEarned  = p.PointsEarned,
-                    UpdatedAt     = p.UpdatedAt
+                    UpdatedAt     = p.UpdatedAt,
+                    ApiStatus     = p.Match.ApiStatus,
+                    Qualifier     = p.Match.Qualifier,
+                    IsKnockout    = p.Match.Stage.Type != StageType.League &&
+                                     p.Match.Stage.Type != StageType.GroupStage
                 }).ToList()
             };
 
