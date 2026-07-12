@@ -775,7 +775,73 @@ namespace QuinielaApp.Controllers
                     IsCurrentUser = e.UserId == uid
                 }).ToList();
             }
+
+            await FillStreakAndMovementAsync(vm, tournament, stageId);
+
             return View(vm);
+        }
+
+        // Calcula, para cada fila ya armada, la racha actual de aciertos consecutivos
+        // y el movimiento de posición respecto a la última ronda de partidos finalizados.
+        // Solo lectura sobre datos ya persistidos (PointsEarned, ResultCorrect) — no recalcula puntos.
+        private async Task FillStreakAndMovementAsync(LeaderboardVm vm, Tournament tournament, int? stageId)
+        {
+            if (!vm.Rows.Any()) return;
+
+            var scopeStageIds = stageId.HasValue
+                ? new List<int> { stageId.Value }
+                : tournament.Stages.Select(s => s.Id).ToList();
+
+            var scopeMatches = await _db.Matches
+                .Where(m => scopeStageIds.Contains(m.StageId))
+                .Select(m => new { m.Id, m.MatchDate, m.Status })
+                .ToListAsync();
+
+            var finishedMatches = scopeMatches.Where(m => m.Status == "FT").ToList();
+            if (!finishedMatches.Any()) return;
+
+            var finishedMatchIds = finishedMatches.Select(m => m.Id).ToHashSet();
+            var matchDateById    = finishedMatches.ToDictionary(m => m.Id, m => m.MatchDate);
+            var lastRoundDate     = finishedMatches.Max(m => m.MatchDate);
+            var lastRoundMatchIds = finishedMatches
+                .Where(m => m.MatchDate == lastRoundDate)
+                .Select(m => m.Id).ToHashSet();
+
+            var scopePreds = await _db.Predictions
+                .Where(p => finishedMatchIds.Contains(p.MatchId))
+                .Select(p => new { p.UserId, p.MatchId, p.PointsEarned, p.ResultCorrect })
+                .ToListAsync();
+
+            var streakByUser        = new Dictionary<int, int>();
+            var lastRoundPtsByUser  = new Dictionary<int, int>();
+            foreach (var g in scopePreds.GroupBy(p => p.UserId))
+            {
+                var ordered = g.OrderBy(p => matchDateById[p.MatchId]).ToList();
+                int running = 0;
+                foreach (var p in ordered)
+                    running = p.ResultCorrect == true ? running + 1 : 0;
+                streakByUser[g.Key] = running;
+
+                lastRoundPtsByUser[g.Key] = ordered
+                    .Where(p => lastRoundMatchIds.Contains(p.MatchId))
+                    .Sum(p => p.PointsEarned);
+            }
+
+            var prevRankByUser = vm.Rows
+                .Select(r => new { r.UserId, PrevPoints = r.TotalPoints - lastRoundPtsByUser.GetValueOrDefault(r.UserId, 0) })
+                .OrderByDescending(x => x.PrevPoints)
+                .Select((x, i) => new { x.UserId, Rank = i + 1 })
+                .ToDictionary(x => x.UserId, x => x.Rank);
+
+            foreach (var r in vm.Rows)
+            {
+                r.CurrentStreak = streakByUser.GetValueOrDefault(r.UserId, 0);
+                if (prevRankByUser.TryGetValue(r.UserId, out var prevRank))
+                {
+                    r.HasMovementData = true;
+                    r.RankMovement    = prevRank - r.Rank;
+                }
+            }
         }
     }
 

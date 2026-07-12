@@ -36,6 +36,39 @@ else
     }
 </div>
 
+@{
+    var podiumSlots = new[] { 2, 1, 3 };
+    var hasPodium = Model.Rows.Any(r => r.Rank <= 3);
+}
+@if (hasPodium)
+{
+    <div class="lb-podium">
+        @foreach (var pos in podiumSlots)
+        {
+            var row = Model.Rows.FirstOrDefault(r => r.Rank == pos);
+            if (row != null)
+            {
+                <div class="lb-podium-slot lb-podium-slot-@pos">
+                    <div class="lb-podium-medal">@row.Medal</div>
+                    <div class="lb-podium-avatar">@row.Username[0].ToString().ToUpper()</div>
+                    <div class="lb-podium-name">
+                        @row.FullName
+                        @if (row.IsCurrentUser) { <span class="lb-podium-you">(tú)</span> }
+                    </div>
+                    @if (row.ShowStreakFire)
+                    {
+                        <div class="lb-podium-streak">🔥 @row.CurrentStreak</div>
+                    }
+                    <div class="lb-podium-stand">
+                        <span class="lb-podium-pts">@row.TotalPoints</span>
+                        <span class="lb-podium-pts-lbl">pts</span>
+                    </div>
+                </div>
+            }
+        }
+    </div>
+}
+
 <div class="card" style="padding:0;overflow:hidden">
     @if (Model.IsStageView)
     {
@@ -71,6 +104,8 @@ else
                             <th style="text-align:center">Resultados</th>
                             <th style="text-align:center">Exactos</th>
                         }
+                        <th style="text-align:center;width:56px">Racha</th>
+                        <th style="text-align:center;width:44px">Mov.</th>
                         <th style="text-align:right;padding-right:1.1rem">Puntos</th>
                         <th style="width:60px"></th>
                     </tr>
@@ -103,6 +138,19 @@ else
                             <td class="lb-stat">@r.ResultHits</td>
                             <td class="lb-stat">@r.ScoreHits</td>
                         }
+                        <td style="text-align:center">
+                            @if (r.ShowStreakFire) { <span class="lb-streak">🔥 @r.CurrentStreak</span> }
+                            else { <span style="color:var(--text-3)">—</span> }
+                        </td>
+                        <td style="text-align:center">
+                            @if (r.HasMovementData)
+                            {
+                                <span class="lb-movement @r.MovementClass" title="@(r.RankMovement > 0 ? $"Subió {r.RankMovement} puesto(s)" : r.RankMovement < 0 ? $"Bajó {Math.Abs(r.RankMovement)} puesto(s)" : "Sin cambios")">
+                                    @r.MovementIcon
+                                </span>
+                            }
+                            else { <span style="color:var(--text-3)">—</span> }
+                        </td>
                         <td class="lb-pts" style="text-align:right;padding-right:1.1rem">@r.TotalPoints</td>
                         <td style="text-align:right;padding-right:.8rem">
                             <a asp-controller="History" asp-action="Log"

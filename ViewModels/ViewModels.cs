@@ -254,6 +254,15 @@ namespace QuinielaApp.ViewModels
         public int     TotalPredictions  { get; set; }
         public bool    IsCurrentUser     { get; set; }
         public string  Medal             => Rank switch { 1 => "🥇", 2 => "🥈", 3 => "🥉", _ => "" };
+
+        // Racha y movimiento — calculados en el controller sobre datos ya persistidos
+        public int  CurrentStreak    { get; set; }
+        public bool HasMovementData  { get; set; }
+        public int  RankMovement     { get; set; } // positivo = subió, negativo = bajó, 0 = igual
+
+        public bool   ShowStreakFire => CurrentStreak >= 2;
+        public string MovementIcon   => !HasMovementData ? "" : RankMovement > 0 ? "⬆️" : RankMovement < 0 ? "⬇️" : "▬";
+        public string MovementClass  => !HasMovementData ? "" : RankMovement > 0 ? "lb-move-up" : RankMovement < 0 ? "lb-move-down" : "lb-move-same";
     }
 
     public class StageTabVm
